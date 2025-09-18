@@ -44,7 +44,7 @@ STYLE_KEYS = [
     "impressionist",
     "cubist",
     "art_deco",
-    "art_nouveau",
+    "fauvist style",
     "pop_art",
     "engraving",
     "watercolor",
