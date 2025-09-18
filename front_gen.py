@@ -34,6 +34,6 @@ if __name__ == "__main__":
         print("Usage: python front_gen.py <number 1..1000>")
         sys.exit(1)
     n = int(sys.argv[1])
-    print(n)
+    print(n, "front")
     print(generate_prompt_by_number(n))
 

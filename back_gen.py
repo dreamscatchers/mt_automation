@@ -38,7 +38,7 @@ if __name__ == "__main__":
         sys.exit(1)
     try:
         n = int(sys.argv[1])
-        print(n)
+        print(n, "back")
         print(generate_prompt_by_number(n))
     except Exception as e:
         print(f"Error: {e}")
