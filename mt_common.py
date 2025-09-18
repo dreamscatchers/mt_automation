@@ -3,6 +3,7 @@
 
 TITLE = "MASTER'S TOUCH MEDITATION"
 
+# Единые локации / одежда / атмосферы
 PLACES = [
     "shallow water with gentle ripples fading toward misty mountains and a tiny tree-covered island",
     "a mountain at sunrise with faceted ridgelines",
@@ -13,7 +14,7 @@ PLACES = [
     "a candle-lit cave pool with soft reflections",
     "a cosmic horizon with subtle nebula shapes",
     "an underwater realm with soft caustics",
-    "a flowering garden pond with lotus leaves"
+    "a flowering garden pond with lotus leaves",
 ]
 
 CLOTHES = [
@@ -26,7 +27,7 @@ CLOTHES = [
     "simple mystical armor (clean, non-aggressive shapes)",
     "an Indian dhoti and sash",
     "a futuristic meditation suit",
-    "a transparent light body rendered as clean monochrome contours"
+    "a transparent light body rendered as clean monochrome contours",
 ]
 
 ATMOSPHERES = [
@@ -34,31 +35,82 @@ ATMOSPHERES = [
     "gentle sunrise glow in a light mist",
     "silvery dawn ambiance with crisp clarity",
     "warm evening radiance through drifting mist",
-    "twilight glow with tender colors"
+    "twilight glow with tender colors",
 ]
 
-def day_label(index):
+# ЕДИНЫЕ СТИЛИ (каноничные ключи) и их формулировки для front/back
+STYLE_KEYS = [
+    "anime",
+    "impressionist",
+    "cubist",
+    "art_deco",
+    "art_nouveau",
+    "pop_art",
+    "engraving",
+    "watercolor",
+    "minimal_line",
+    "technical_line",
+]
+
+STYLE_LABELS = {
+    "front": {
+        "anime": "anime-style illustration",
+        "impressionist": "Impressionist illustration",
+        "cubist": "Cubist illustration",
+        "art_deco": "Art Deco poster-style illustration",
+        "art_nouveau": "Art Nouveau illustration",
+        "pop_art": "Pop Art graphic illustration",
+        "engraving": "engraving-style illustration",
+        "watercolor": "watercolor illustration",
+        "minimal_line": "minimalist line-art illustration",
+        "technical_line": "technical line drawing",
+    },
+    "back": {
+        "anime": "anime-style illustration",
+        "impressionist": "Impressionist illustration",
+        "cubist": "Cubist illustration",
+        "art_deco": "Art Deco poster",
+        "art_nouveau": "Art Nouveau illustration",
+        "pop_art": "Pop Art graphic",
+        "engraving": "engraving-style illustration",
+        "watercolor": "watercolor painting",
+        "minimal_line": "minimalist line art",
+        "technical_line": "technical line drawing",
+    },
+}
+
+
+def day_label(index: int) -> str:
+    if not (1 <= index <= 1000):
+        raise ValueError("Index must be between 1 and 1000")
     return f"Day {index} of 1000"
 
-def pick_common(index, styles):
+
+def pick_style(mode: str, index: int) -> str:
+    if mode not in STYLE_LABELS:
+        raise ValueError("mode must be 'front' or 'back'")
+    i0 = (index - 1) % len(STYLE_KEYS)
+    key = STYLE_KEYS[i0]
+    return STYLE_LABELS[mode][key]
+
+
+def pick_common(index: int, mode: str):
     """
-    Единая логика выбора style/place/clothing/atmosphere по индексу.
-    Совпадает с тем, как это делалось в генераторах:
-      - style: по модулю длины styles
-      - place: блоками по 10 (i0 // 10)
-      - clothing: блоками по 100 (i0 // 100)
-      - atmosphere: по модулю длины ATMOSPHERES
+    Возвращает (style, place, clothing, atmosphere) по индексу.
+    style берётся из единого набора через pick_style(mode, index).
+    place меняется каждые 10; clothing — каждые 100; atmosphere — по модулю.
     """
     if not (1 <= index <= 1000):
         raise ValueError("Index must be between 1 and 1000")
     i0 = index - 1
-    style = styles[i0 % len(styles)]
+    style = pick_style(mode, index)
     place = PLACES[(i0 // 10) % len(PLACES)]
     clothing = CLOTHES[i0 // 100]
     atmosphere = ATMOSPHERES[i0 % len(ATMOSPHERES)]
     return style, place, clothing, atmosphere
 
-def title_block(mode, index):
+
+def title_block(mode: str, index: int) -> str:
     """
     Единый текст про титул и подзаголовок с номером дня.
     mode: 'front' или 'back'
@@ -69,10 +121,9 @@ def title_block(mode, index):
             f'Keep the arched title exactly as “{TITLE}” with the same arc, spacing, and spelling.\n'
             f'Add a clearly legible subtitle just below the title that reads “{dl}”.'
         )
-    elif mode == "front":
+    if mode == "front":
         return (
             f'Typography: keep the arched title “{TITLE}” and add a clear subtitle under it that reads “{dl}”.'
         )
-    else:
-        raise ValueError("mode must be 'front' or 'back'")
+    raise ValueError("mode must be 'front' or 'back'")
 

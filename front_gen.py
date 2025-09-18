@@ -1,5 +1,5 @@
-# front_recast_block_generator.py
-# Usage: python front_recast_block_generator.py <number 1..1000>
+# front_gen.py  (бывш. front_recast_block_generator.py)
+# Usage: python front_gen.py <number 1..1000>
 
 from mt_common import pick_common, title_block
 
@@ -7,21 +7,8 @@ def generate_prompt_by_number(index: int) -> str:
     if not (1 <= index <= 1000):
         raise ValueError("Index must be between 1 and 1000")
 
-    styles = [
-        "anime-style illustration",
-        "Impressionist illustration",
-        "Cubist illustration",
-        "Art Deco poster-style illustration",
-        "Art Nouveau illustration",
-        "Pop Art graphic illustration",
-        "engraving-style illustration",
-        "watercolor illustration",
-        "minimalist line-art illustration",
-        "technical line drawing"
-    ]
-
-    # Единая логика подбора общих параметров
-    style, place, clothing, atmosphere = pick_common(index, styles)
+    # Единая логика подбора общих параметров (стиль берётся из общего набора)
+    style, place, clothing, atmosphere = pick_common(index, mode="front")
     # Единый блок про титул и подпись дня
     title_lines = title_block("front", index)
 
@@ -44,7 +31,7 @@ Produce a crisp, refined illustration with no artifacts or watermarks.
 if __name__ == "__main__":
     import sys
     if len(sys.argv) != 2:
-        print("Usage: python front_recast_block_generator.py <number 1..1000>")
+        print("Usage: python front_gen.py <number 1..1000>")
         sys.exit(1)
     n = int(sys.argv[1])
     print(n)

@@ -1,5 +1,5 @@
-# sora_recast_generator.py
-# Usage: python sora_recast_generator.py <number 1..1000>
+# back_gen.py  (бывш. sora_recast_generator.py)
+# Usage: python back_gen.py <number 1..1000>
 
 from mt_common import pick_common, title_block
 
@@ -7,15 +7,8 @@ def generate_prompt_by_number(index: int) -> str:
     if not (1 <= index <= 1000):
         raise ValueError("Index must be between 1 and 1000")
 
-    styles = [
-        "Impressionist illustration", "Cubist illustration", "Baroque painting",
-        "Art Deco poster", "Art Nouveau illustration", "Pop Art graphic",
-        "engraving-style illustration", "watercolor painting",
-        "anime-style illustration", "minimalist line art"
-    ]
-
-    # Единая логика подбора общих параметров
-    style, place, clothing, atmosphere = pick_common(index, styles)
+    # Единая логика подбора общих параметров (стиль берётся из общего набора)
+    style, place, clothing, atmosphere = pick_common(index, mode="back")
     # Единый блок про титул и подпись дня
     title_lines = title_block("back", index)
 
@@ -41,7 +34,7 @@ Produce a crisp, refined illustration with no artifacts or watermarks.
 if __name__ == "__main__":
     import sys
     if len(sys.argv) != 2:
-        print("Usage: python sora_recast_generator.py <number 1..1000>")
+        print("Usage: python back_gen.py <number 1..1000>")
         sys.exit(1)
     try:
         n = int(sys.argv[1])
