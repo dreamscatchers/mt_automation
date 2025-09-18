@@ -8,7 +8,7 @@ def generate_prompt_by_number(index: int) -> str:
         raise ValueError("Index must be between 1 and 1000")
 
     # Единая логика подбора общих параметров (стиль берётся из общего набора)
-    style, place, clothing, atmosphere = pick_common(index, mode="front")
+    style, place, clothing, atmosphere = pick_common(index)
     # Единый блок про титул и подпись дня
     title_lines = title_block("front", index)
 

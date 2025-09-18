@@ -38,63 +38,32 @@ ATMOSPHERES = [
     "twilight glow with tender colors",
 ]
 
-# ЕДИНЫЕ СТИЛИ (каноничные ключи) и их формулировки для front/back
-STYLE_KEYS = [
-    "anime",
-    "impressionist",
-    "cubist",
-    "art_deco",
-    "fauvist style",
-    "pop_art",
-    "engraving",
-    "watercolor",
-    "minimal_line",
-    "technical_line",
+STYLES = [
+    "anime-style illustration",
+    "Impressionist illustration",
+    "Cubist illustration",
+    "Art Deco poster-style illustration",
+    "Art Nouveau illustration",
+    "Pop Art graphic illustration",
+    "engraving-style illustration",
+    "watercolor illustration",
+    "minimalist line-art illustration",
+    "technical line drawing",
 ]
-
-STYLE_LABELS = {
-    "front": {
-        "anime": "anime-style illustration",
-        "impressionist": "Impressionist illustration",
-        "cubist": "Cubist illustration",
-        "art_deco": "Art Deco poster-style illustration",
-        "art_nouveau": "Art Nouveau illustration",
-        "pop_art": "Pop Art graphic illustration",
-        "engraving": "engraving-style illustration",
-        "watercolor": "watercolor illustration",
-        "minimal_line": "minimalist line-art illustration",
-        "technical_line": "technical line drawing",
-    },
-    "back": {
-        "anime": "anime-style illustration",
-        "impressionist": "Impressionist illustration",
-        "cubist": "Cubist illustration",
-        "art_deco": "Art Deco poster",
-        "art_nouveau": "Art Nouveau illustration",
-        "pop_art": "Pop Art graphic",
-        "engraving": "engraving-style illustration",
-        "watercolor": "watercolor painting",
-        "minimal_line": "minimalist line art",
-        "technical_line": "technical line drawing",
-    },
-}
-
 
 def day_label(index: int) -> str:
     if not (1 <= index <= 1000):
         raise ValueError("Index must be between 1 and 1000")
     return f"Day {index} of 1000"
 
+def pick_style(index: int) -> str:
+    """Возвращает стиль из общего списка STYLES по индексу (циклично)."""
+    if not (1 <= index <= 1000):
+        raise ValueError("Index must be between 1 and 1000")
+    i0 = (index - 1) % len(STYLES)
+    return STYLES[i0]
 
-def pick_style(mode: str, index: int) -> str:
-    if mode not in STYLE_LABELS:
-        raise ValueError("mode must be 'front' or 'back'")
-    i0 = (index - 1) % len(STYLE_KEYS)
-    key = STYLE_KEYS[i0]
-    return STYLE_LABELS[mode][key]
-
-
-def pick_common(index: int, mode: str):
+def pick_common(index: int):
     """
     Возвращает (style, place, clothing, atmosphere) по индексу.
     style берётся из единого набора через pick_style(mode, index).
@@ -103,7 +72,7 @@ def pick_common(index: int, mode: str):
     if not (1 <= index <= 1000):
         raise ValueError("Index must be between 1 and 1000")
     i0 = index - 1
-    style = pick_style(mode, index)
+    style = pick_style(index)
     place = PLACES[(i0 // 10) % len(PLACES)]
     clothing = CLOTHES[i0 // 100]
     atmosphere = ATMOSPHERES[i0 % len(ATMOSPHERES)]
