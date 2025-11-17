@@ -22,7 +22,8 @@ def generate_prompt_by_number(index: int) -> str:
         "Do not add extra fingers or thumbs.",
         "Do not remove, distort, or misspell the title or subtitle.",
         "Avoid warped typography and background clutter.",
-        "Produce a crisp, refined illustration with no artifacts or watermarks."
+        "Produce a crisp, refined illustration with no artifacts or watermarks.",
+        "Do not add frames around the image"
     ]
     all_negatives = base_negatives + extra_negatives
 

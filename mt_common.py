@@ -16,7 +16,7 @@ STYLES = [
     "engraving-style illustration",
     "watercolor illustration",
     "minimalist line-art illustration",
-    "technical line drawing",
+    "Expressionist illustration",
     "Baroque painting",
 ]
 
