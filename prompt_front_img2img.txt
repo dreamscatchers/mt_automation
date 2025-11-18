@@ -1,0 +1,7 @@
+Use the input line-art image as the base. 
+Keep the pose, body proportions, the exact hand mudra, and the arched title text “MASTER'S TOUCH MEDITATION” exactly as in the original image. 
+Do not change the number of fingers, do not change the finger positions, do not add or remove limbs, do not distort the typography.
+
+Add a soft colored background with a calm lake, distant mountains and gentle sunrise light. 
+Add subtle shading and light gradients on the monk and clothes, but keep the line-art contours clean and readable. 
+Overall style: high-quality digital illustration, tranquil meditation atmosphere.
