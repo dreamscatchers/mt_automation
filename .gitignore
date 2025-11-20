@@ -3,4 +3,5 @@ __pycache__/
 /out
 .venv
 *secret*
+token*.json
 
