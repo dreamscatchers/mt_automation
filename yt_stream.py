@@ -1,11 +1,20 @@
+#!/usr/bin/env python3
 import os
+from typing import Optional, List
+
 from googleapiclient.http import MediaFileUpload
 from yt_auth import get_youtube_service
 
+# Полные права на управление каналом
 SCOPES = ["https://www.googleapis.com/auth/youtube"]
 
 
-def create_live_broadcast(youtube, title: str, description: str, start_time_rfc3339: str):
+def create_live_broadcast(
+    youtube,
+    title: str,
+    description: str,
+    start_time_rfc3339: str,
+):
     request = youtube.liveBroadcasts().insert(
         part="snippet,status,contentDetails",
         body={
@@ -19,7 +28,7 @@ def create_live_broadcast(youtube, title: str, description: str, start_time_rfc3
                 "selfDeclaredMadeForKids": False,
             },
             "contentDetails": {
-                "monitorStream": {"enableMonitorStream": True}
+                "monitorStream": {"enableMonitorStream": True},
             },
         },
     )
@@ -31,7 +40,7 @@ def create_live_stream(youtube, title: str):
         part="snippet,cdn,contentDetails",
         body={
             "snippet": {
-                "title": title
+                "title": title,
             },
             "cdn": {
                 "frameRate": "30fps",
@@ -43,7 +52,11 @@ def create_live_stream(youtube, title: str):
     return request.execute()
 
 
-def bind_broadcast_to_stream(youtube, broadcast_id: str, stream_id: str):
+def bind_broadcast_to_stream(
+    youtube,
+    broadcast_id: str,
+    stream_id: str,
+):
     request = youtube.liveBroadcasts().bind(
         part="id,contentDetails",
         id=broadcast_id,
@@ -52,8 +65,16 @@ def bind_broadcast_to_stream(youtube, broadcast_id: str, stream_id: str):
     return request.execute()
 
 
-def set_thumbnail(youtube, broadcast_id: str, thumbnail_path: str):
-    upload = MediaFileUpload(thumbnail_path, mimetype="image/jpeg", resumable=False)
+def set_thumbnail(
+    youtube,
+    broadcast_id: str,
+    thumbnail_path: str,
+):
+    upload = MediaFileUpload(
+        thumbnail_path,
+        mimetype="image/jpeg",
+        resumable=False,
+    )
     request = youtube.thumbnails().set(
         videoId=broadcast_id,
         media_body=upload,
@@ -61,7 +82,11 @@ def set_thumbnail(youtube, broadcast_id: str, thumbnail_path: str):
     return request.execute()
 
 
-def add_video_to_playlist(youtube, playlist_id: str, video_id: str):
+def add_video_to_playlist(
+    youtube,
+    playlist_id: str,
+    video_id: str,
+):
     request = youtube.playlistItems().insert(
         part="snippet",
         body={
@@ -82,38 +107,54 @@ def schedule_stream(
     description: str,
     start_time_rfc3339: str,
     thumbnail_path: str,
-    playlist_ids: list[str] | None = None,
+    playlist_ids: Optional[List[tuple[str, str]]] = None,
 ):
+    """
+    playlist_ids: список кортежей (playlist_id, playlist_alias)
+    """
     youtube = get_youtube_service(SCOPES)
 
     print("→ Создаём liveBroadcast…")
-    broadcast = create_live_broadcast(youtube, title, description, start_time_rfc3339)
+    broadcast = create_live_broadcast(
+        youtube,
+        title=title,
+        description=description,
+        start_time_rfc3339=start_time_rfc3339,
+    )
     broadcast_id = broadcast["id"]
     print("   broadcastId:", broadcast_id)
 
     print("→ Создаём liveStream…")
-    stream = create_live_stream(youtube, title)
+    stream = create_live_stream(youtube, title=title)
     stream_id = stream["id"]
     print("   streamId:", stream_id)
 
     print("→ Привязываем broadcast ↔ stream…")
-    bind_broadcast_to_stream(youtube, broadcast_id, stream_id)
+    bind_broadcast_to_stream(
+        youtube,
+        broadcast_id=broadcast_id,
+        stream_id=stream_id,
+    )
 
     print("→ Загружаем обложку…")
-    set_thumbnail(youtube, broadcast_id, thumbnail_path)
+    set_thumbnail(
+        youtube,
+        broadcast_id=broadcast_id,
+        thumbnail_path=thumbnail_path,
+    )
 
-    # RTMP данные
     ingestion = stream["cdn"]["ingestionInfo"]
     rtmp_url = ingestion["ingestionAddress"]
     stream_key = ingestion["streamName"]
 
-    # Добавление в один или несколько плейлистов
     if playlist_ids:
-        for pid in playlist_ids:
-            if not pid:
-                continue
-            print(f"→ Добавляем в плейлист {pid}…")
-            add_video_to_playlist(youtube, pid, broadcast_id)
+        for pid, alias in playlist_ids:
+            print(f"→ Добавляем в плейлист: {alias}…")
+            add_video_to_playlist(
+                youtube,
+                playlist_id=pid,
+                video_id=broadcast_id,
+            )
         print("→ Добавление в плейлисты завершено.")
     else:
         print("Плейлисты не заданы, пропускаю добавление.")
