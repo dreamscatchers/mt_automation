@@ -142,6 +142,46 @@ def day_already_has_stream(index: int, existing_titles: list[str]) -> bool:
     return False
 
 def parse_args():
+    parser = argparse.ArgumentParser(
+        description=(
+            "YouTube stream scheduler for Master's Touch Meditation.\n\n"
+            "Примеры:\n"
+            "  schedule_range.py 285-300            # dry-run (ничего не создаёт)\n"
+            "  schedule_range.py 285-300 --no-dry-run  # создать реальные стримы\n"
+            "  schedule_range.py 285-300 -e         # подробно о существующих стримах\n"
+        ),
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+
+    parser.add_argument(
+        "range",
+        help="Диапазон дней в формате START-END, например: 285-287",
+    )
+
+    parser.add_argument(
+        "--dry-run",
+        dest="dry_run",
+        action="store_true",
+        default=True,
+        help="Запуск в тестовом режиме (по умолчанию включён)",
+    )
+
+    parser.add_argument(
+        "--no-dry-run",
+        dest="dry_run",
+        action="store_false",
+        help="Отключить тестовый режим и выполнять реальные действия",
+    )
+
+    parser.add_argument(
+        "--verbose-existing",
+        "-e",
+        dest="verbose_existing",
+        action="store_true",
+        help="Показывать подробную информацию о уже существующих стримах",
+    )
+
+    return parser.parse_args()
     parser = argparse.ArgumentParser(description="YouTube stream scheduler")
 
     parser.add_argument(
