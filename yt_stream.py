@@ -1,55 +1,65 @@
 #!/usr/bin/env python3
-import os
-from typing import Optional, List
+from __future__ import annotations
 
+from typing import List, Optional, Tuple
+
+from dotenv import dotenv_values
 from googleapiclient.http import MediaFileUpload
+
 from yt_auth import get_youtube_service
 
-# Полные права на управление каналом
-SCOPES = ["https://www.googleapis.com/auth/youtube"]
+
+# --------------------------------------------------------------------
+# Конфиг из .env (НЕ из окружения)
+# --------------------------------------------------------------------
+config = dotenv_values(".env")
+
+PERSISTENT_STREAM_ID: Optional[str] = config.get("PERSISTENT_STREAM_ID")
+
+# Те же SCOPES, что и в schedule_range.py
+SCOPES: List[str] = [
+    "https://www.googleapis.com/auth/youtube",
+    "https://www.googleapis.com/auth/youtube.force-ssl",
+]
+
+PlaylistSpec = Tuple[str, str]  # (playlist_id, alias)
 
 
+# --------------------------------------------------------------------
+# Низкоуровневые операции с YouTube API
+# --------------------------------------------------------------------
 def create_live_broadcast(
     youtube,
     title: str,
     description: str,
     start_time_rfc3339: str,
+    privacy_status: str = "public",
+    made_for_kids: bool = False,
 ):
-    request = youtube.liveBroadcasts().insert(
-        part="snippet,status,contentDetails",
-        body={
-            "snippet": {
-                "title": title,
-                "description": description,
-                "scheduledStartTime": start_time_rfc3339,
-            },
-            "status": {
-                "privacyStatus": "public",
-                "selfDeclaredMadeForKids": False,
-            },
-            "contentDetails": {
-                "monitorStream": {"enableMonitorStream": True},
-            },
+    """Создаёт liveBroadcast и возвращает ответ API."""
+    body = {
+        "snippet": {
+            "title": title,
+            "description": description,
+            "scheduledStartTime": start_time_rfc3339,
         },
-    )
-    return request.execute()
-
-
-def create_live_stream(youtube, title: str):
-    request = youtube.liveStreams().insert(
-        part="snippet,cdn,contentDetails",
-        body={
-            "snippet": {
-                "title": title,
-            },
-            "cdn": {
-                "frameRate": "30fps",
-                "ingestionType": "rtmp",
-                "resolution": "1080p",
-            },
+        "status": {
+            "privacyStatus": privacy_status,
+            "selfDeclaredMadeForKids": made_for_kids,
         },
-    )
-    return request.execute()
+        "contentDetails": {
+            # Можно включить авто-старт/стоп при желании:
+            "enableAutoStart": False,
+            "enableAutoStop": False,
+        },
+    }
+
+    resp = youtube.liveBroadcasts().insert(
+        part="snippet,contentDetails,status",
+        body=body,
+    ).execute()
+
+    return resp
 
 
 def bind_broadcast_to_stream(
@@ -57,12 +67,12 @@ def bind_broadcast_to_stream(
     broadcast_id: str,
     stream_id: str,
 ):
-    request = youtube.liveBroadcasts().bind(
+    """Привязывает liveBroadcast к существующему liveStream."""
+    youtube.liveBroadcasts().bind(
         part="id,contentDetails",
         id=broadcast_id,
         streamId=stream_id,
-    )
-    return request.execute()
+    ).execute()
 
 
 def set_thumbnail(
@@ -70,16 +80,12 @@ def set_thumbnail(
     broadcast_id: str,
     thumbnail_path: str,
 ):
-    upload = MediaFileUpload(
-        thumbnail_path,
-        mimetype="image/jpeg",
-        resumable=False,
-    )
-    request = youtube.thumbnails().set(
+    """Загружает thumbnail для видео/стрима."""
+    media = MediaFileUpload(thumbnail_path, mimetype="image/jpeg")
+    youtube.thumbnails().set(
         videoId=broadcast_id,
-        media_body=upload,
-    )
-    return request.execute()
+        media_body=media,
+    ).execute()
 
 
 def add_video_to_playlist(
@@ -87,36 +93,66 @@ def add_video_to_playlist(
     playlist_id: str,
     video_id: str,
 ):
-    request = youtube.playlistItems().insert(
+    """Добавляет видео/стрим в плейлист."""
+    body = {
+        "snippet": {
+            "playlistId": playlist_id,
+            "resourceId": {
+                "kind": "youtube#video",
+                "videoId": video_id,
+            },
+        }
+    }
+
+    youtube.playlistItems().insert(
         part="snippet",
-        body={
-            "snippet": {
-                "playlistId": playlist_id,
-                "resourceId": {
-                    "kind": "youtube#video",
-                    "videoId": video_id,
-                },
-            }
-        },
-    )
-    return request.execute()
+        body=body,
+    ).execute()
 
 
+# --------------------------------------------------------------------
+# Основная высокоуровневая функция
+# --------------------------------------------------------------------
 def schedule_stream(
     title: str,
     description: str,
     start_time_rfc3339: str,
     thumbnail_path: str,
-    playlist_ids: Optional[List[tuple[str, str]]] = None,
-):
+    playlist_ids: Optional[List[PlaylistSpec]] = None,
+) -> dict:
     """
-    playlist_ids: список кортежей (playlist_id, playlist_alias)
+    Создаёт запланированный стрим, привязывает к ПЕРМАНЕНТНОМУ потоку
+    и добавляет его в плейлисты.
+
+    Сигнатура совместима с рабочим schedule_range.py:
+
+      - title: заголовок
+      - description: описание
+      - start_time_rfc3339: время начала (RFC 3339, с таймзоной)
+      - thumbnail_path: путь к JPG-обложке
+      - playlist_ids: список кортежей (playlist_id, alias)
+
+    Возвращает dict:
+      {
+        "broadcast_id": ...,
+        "stream_id":    ... (это PERSISTENT_STREAM_ID),
+        "watch_url":    ...,
+        "rtmp_url":     ...,
+        "stream_key":   ...,
+      }
     """
+    if not PERSISTENT_STREAM_ID:
+        raise RuntimeError(
+            "PERSISTENT_STREAM_ID не задан в .env. "
+            "Добавь его в automation/.env."
+        )
+
+    # YouTube API клиент
     youtube = get_youtube_service(SCOPES)
 
     print("→ Создаём liveBroadcast…")
     broadcast = create_live_broadcast(
-        youtube,
+        youtube=youtube,
         title=title,
         description=description,
         start_time_rfc3339=start_time_rfc3339,
@@ -124,34 +160,46 @@ def schedule_stream(
     broadcast_id = broadcast["id"]
     print("   broadcastId:", broadcast_id)
 
-    print("→ Создаём liveStream…")
-    stream = create_live_stream(youtube, title=title)
-    stream_id = stream["id"]
-    print("   streamId:", stream_id)
-
-    print("→ Привязываем broadcast ↔ stream…")
+    print("→ Привязываем broadcast к постоянному потоку…")
     bind_broadcast_to_stream(
-        youtube,
+        youtube=youtube,
         broadcast_id=broadcast_id,
-        stream_id=stream_id,
+        stream_id=PERSISTENT_STREAM_ID,
     )
 
     print("→ Загружаем обложку…")
     set_thumbnail(
-        youtube,
+        youtube=youtube,
         broadcast_id=broadcast_id,
         thumbnail_path=thumbnail_path,
     )
 
-    ingestion = stream["cdn"]["ingestionInfo"]
+    # Получаем RTMP URL и ключ постоянного потока
+    print("→ Получаем данные постоянного потока…")
+    stream_resp = youtube.liveStreams().list(
+        part="cdn",
+        id=PERSISTENT_STREAM_ID,
+    ).execute()
+
+    items = stream_resp.get("items", [])
+    if not items:
+        raise RuntimeError(
+            f"Не найден liveStream с id={PERSISTENT_STREAM_ID}. "
+            "Проверь, что ты указал корректный PERSISTENT_STREAM_ID в .env."
+        )
+
+    ingestion = items[0]["cdn"]["ingestionInfo"]
     rtmp_url = ingestion["ingestionAddress"]
     stream_key = ingestion["streamName"]
 
+    # Добавляем в плейлисты
     if playlist_ids:
         for pid, alias in playlist_ids:
             print(f"→ Добавляем в плейлист: {alias}…")
+            # ВАЖНО: в плейлист добавляем именно broadcast_id (видео),
+            # как в твоём рабочем варианте
             add_video_to_playlist(
-                youtube,
+                youtube=youtube,
                 playlist_id=pid,
                 video_id=broadcast_id,
             )
@@ -159,10 +207,12 @@ def schedule_stream(
     else:
         print("Плейлисты не заданы, пропускаю добавление.")
 
+    watch_url = f"https://www.youtube.com/watch?v={broadcast_id}"
+
     return {
         "broadcast_id": broadcast_id,
-        "stream_id": stream_id,
-        "watch_url": f"https://www.youtube.com/watch?v={broadcast_id}",
+        "stream_id": PERSISTENT_STREAM_ID,
+        "watch_url": watch_url,
         "rtmp_url": rtmp_url,
         "stream_key": stream_key,
     }
