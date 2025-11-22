@@ -164,6 +164,14 @@ def parse_args():
         help="Отключить тестовый режим и выполнять реальные действия"
     )
 
+    parser.add_argument(
+        "--verbose-existing",
+        "-e",
+        dest="verbose_existing",
+        action="store_true",
+        help="Показывать подробную информацию о уже существующих стримах"
+    )
+
     return parser.parse_args()
 
 
@@ -172,20 +180,23 @@ def parse_args():
 # ---------------------------------------------------------
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: python schedule_range.py 275-282")
-        sys.exit(1)
+    global VERBOSE_EXISTING
 
+    args = parse_args()
+
+    # Парсим диапазон из args.range
     try:
-        start, end = parse_range(sys.argv[1])
+        start, end = parse_range(args.range)
     except Exception as e:
         print("Ошибка диапазона:", e)
         sys.exit(1)
 
-    args = parse_args()
     DRY_RUN = args.dry_run
+    VERBOSE_EXISTING = args.verbose_existing
+
     print(f"Проверяем / создаём стримы для дней {start}–{end}")
     print(f"DRY_RUN = {DRY_RUN}")
+    print(f"VERBOSE_EXISTING = {VERBOSE_EXISTING}")
 
     youtube = get_youtube_service(YT_SCOPES)
     existing_titles = load_existing_titles_from_uploads(youtube)
