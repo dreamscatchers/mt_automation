@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import sys
 import os
+import argparse
+
 from pathlib import Path
 from datetime import date, timedelta
 
@@ -15,7 +17,6 @@ load_dotenv()
 # ---------------------------------------------------------
 # РЕЖИМЫ
 # ---------------------------------------------------------
-DRY_RUN = False            # True = ничего не создаём, только выводим
 VERBOSE_EXISTING = False  # True = выводить ВСЕ существующие заголовки
 # ---------------------------------------------------------
 
@@ -140,6 +141,31 @@ def day_already_has_stream(index: int, existing_titles: list[str]) -> bool:
     print(f"[{index}] Стрима для этого дня нет.")
     return False
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="YouTube stream scheduler")
+
+    parser.add_argument(
+        "range",
+        help="Диапазон дней, например 285-287"
+    )
+
+    parser.add_argument(
+        "--dry-run",
+        dest="dry_run",
+        action="store_true",
+        default=True,
+        help="Запуск в тестовом режиме (по умолчанию включён)"
+    )
+
+    parser.add_argument(
+        "--no-dry-run",
+        dest="dry_run",
+        action="store_false",
+        help="Отключить тестовый режим и выполнять реальные действия"
+    )
+
+    return parser.parse_args()
+
 
 # ---------------------------------------------------------
 # ОСНОВНАЯ ЛОГИКА
@@ -156,6 +182,8 @@ def main():
         print("Ошибка диапазона:", e)
         sys.exit(1)
 
+    args = parse_args()
+    DRY_RUN = args.dry_run
     print(f"Проверяем / создаём стримы для дней {start}–{end}")
     print(f"DRY_RUN = {DRY_RUN}")
 
