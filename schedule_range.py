@@ -4,12 +4,14 @@ import os
 import argparse
 
 from pathlib import Path
-from datetime import date, timedelta
+from datetime import date
 
 from dotenv import load_dotenv
 from yt_stream import schedule_stream, SCOPES as YT_SCOPES
 from yt_auth import get_youtube_service
 from generate_image_gemini import generate_image
+from day_index import index_to_date
+
 
 
 load_dotenv()
@@ -19,9 +21,6 @@ load_dotenv()
 # ---------------------------------------------------------
 VERBOSE_EXISTING = False  # True = выводить ВСЕ существующие заголовки
 # ---------------------------------------------------------
-
-# День 1 = 2025-02-20 (фиксированная история)
-BASE_DATE = date(2025, 2, 20)
 
 # Папка с JPG-обложками
 SEQUENCE_DIR = Path.home() / "projects" / "master_touch_meditation" / "sequence"
@@ -35,12 +34,6 @@ FULL_PLAYLIST_ID = os.getenv("FULL_MTM_PLAYLIST_ID")
 # ---------------------------------------------------------
 # ПРОСТЫЕ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 # ---------------------------------------------------------
-
-def index_to_date(index: int) -> date:
-    if index < 1:
-        raise ValueError("День должен быть >= 1")
-    return BASE_DATE + timedelta(days=index - 1)
-
 
 def date_to_start_time_rfc3339(d: date) -> str:
     """Старт всегда в 10:00 -04:00."""
