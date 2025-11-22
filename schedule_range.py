@@ -5,17 +5,22 @@ from pathlib import Path
 from datetime import date, timedelta
 
 from dotenv import load_dotenv
-from yt_stream import schedule_stream
+from yt_stream import schedule_stream, SCOPES as YT_SCOPES
+from yt_auth import get_youtube_service
 
 load_dotenv()
 
-# Нумерация:
-# 1 → 2025-02-20
-# 2 → 2025-02-21
-# и т.д.
+# ---------------------------------------------------------
+# РЕЖИМЫ
+# ---------------------------------------------------------
+DRY_RUN = False            # True = ничего не создаём, только выводим
+VERBOSE_EXISTING = False  # True = выводить ВСЕ существующие заголовки
+# ---------------------------------------------------------
+
+# День 1 = 2025-02-20 (фиксированная история)
 BASE_DATE = date(2025, 2, 20)
 
-# Папка с готовыми заставками: N.jpg
+# Папка с JPG-обложками
 SEQUENCE_DIR = Path.home() / "projects" / "master_touch_meditation" / "sequence"
 
 # Плейлисты из .env
@@ -24,85 +29,162 @@ HALF_PLAYLIST_ID = os.getenv("HALF_MTM_PLAYLIST_ID")
 FULL_PLAYLIST_ID = os.getenv("FULL_MTM_PLAYLIST_ID")
 
 
+# ---------------------------------------------------------
+# ПРОСТЫЕ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+# ---------------------------------------------------------
+
 def index_to_date(index: int) -> date:
     if index < 1:
-        raise ValueError("Номер дня должен быть >= 1")
+        raise ValueError("День должен быть >= 1")
     return BASE_DATE + timedelta(days=index - 1)
 
 
 def date_to_start_time_rfc3339(d: date) -> str:
+    """Старт всегда в 10:00 -04:00."""
     return f"{d.isoformat()}T10:00:00-04:00"
 
 
 def parse_range(arg: str) -> tuple[int, int]:
     if "-" not in arg:
-        raise ValueError("Ожидался диапазон вида 275-282")
-    start_str, end_str = arg.split("-", 1)
-    start, end = int(start_str), int(end_str)
-    if start > end:
-        start, end = end, start
-    return start, end
+        raise ValueError("Используй диапазон вида 275-282")
+    a, b = arg.split("-", 1)
+    a, b = int(a), int(b)
+    return (a, b) if a <= b else (b, a)
 
 
 def choose_playlists_for_date(d: date) -> list[tuple[str, str]]:
-    """
-    Возвращает список плейлистов в виде:
-    [
-        (playlist_id, "General"),
-        (playlist_id, "1/2 Version") ИЛИ (playlist_id, "Full Version")
-    ]
-    """
-    playlists: list[tuple[str, str]] = []
+    play = []
 
-    # Всегда — общий
+    # Всегда — General
     if GENERAL_PLAYLIST_ID:
-        playlists.append((GENERAL_PLAYLIST_ID, "General"))
+        play.append((GENERAL_PLAYLIST_ID, "General"))
 
-    is_sunday = d.weekday() == 6  # Monday=0, Sunday=6
+    is_sunday = d.weekday() == 6
 
     if is_sunday:
         if FULL_PLAYLIST_ID:
-            playlists.append((FULL_PLAYLIST_ID, "Full Version"))
+            play.append((FULL_PLAYLIST_ID, "Full Version"))
     else:
         if HALF_PLAYLIST_ID:
-            playlists.append((HALF_PLAYLIST_ID, "1/2 Version"))
+            play.append((HALF_PLAYLIST_ID, "1/2 Version"))
 
-    return playlists
+    return play
 
+
+# ---------------------------------------------------------
+# ПОЛУЧЕНИЕ СПИСКА ВСЕХ ВИДЕО/СТРИМОВ (UPLOADS PLAYLIST)
+# ---------------------------------------------------------
+
+def get_uploads_playlist_id(youtube) -> str:
+    resp = youtube.channels().list(
+        part="contentDetails",
+        mine=True
+    ).execute()
+
+    items = resp.get("items", [])
+    if not items:
+        raise RuntimeError("Не удалось получить канал (mine=True).")
+
+    return items[0]["contentDetails"]["relatedPlaylists"]["uploads"]
+
+
+def load_existing_titles_from_uploads(youtube) -> list[str]:
+    uploads_id = get_uploads_playlist_id(youtube)
+    titles = []
+
+    req = youtube.playlistItems().list(
+        part="snippet",
+        playlistId=uploads_id,
+        maxResults=50,
+    )
+
+    while req is not None:
+        resp = req.execute()
+        for item in resp.get("items", []):
+            snippet = item.get("snippet", {})
+            title = snippet.get("title")
+            if title:
+                titles.append(title)
+
+        req = youtube.playlistItems().list_next(
+            previous_request=req,
+            previous_response=resp
+        )
+
+    if VERBOSE_EXISTING:
+        print(f"Загружено {len(titles)} видео/стримов:")
+        for t in titles:
+            print("  •", t)
+    else:
+        print(f"Найдено {len(titles)} существующих видео/стримов.")
+
+    return titles
+
+
+def day_already_has_stream(index: int, existing_titles: list[str]) -> bool:
+    key = f"Day {index} of 1000"
+
+    matches = [t for t in existing_titles if key in t]
+
+    if matches:
+        if VERBOSE_EXISTING:
+            print(f"[{index}] Уже есть стримы с '{key}':")
+            for t in matches:
+                print("      →", t)
+        else:
+            print(f"[{index}] День уже существует.")
+        return True
+
+    print(f"[{index}] Стрима для этого дня нет.")
+    return False
+
+
+# ---------------------------------------------------------
+# ОСНОВНАЯ ЛОГИКА
+# ---------------------------------------------------------
 
 def main():
     if len(sys.argv) != 2:
-        print("Usage: python schedule_range.py <start-end>")
-        print("Пример: python schedule_range.py 275-282")
+        print("Usage: python schedule_range.py 275-282")
         sys.exit(1)
 
     try:
         start, end = parse_range(sys.argv[1])
     except Exception as e:
-        print(f"Ошибка разбора диапазона: {e}")
+        print("Ошибка диапазона:", e)
         sys.exit(1)
 
-    print(f"Создаём стримы для дней с {start} по {end} включительно.")
+    print(f"Проверяем / создаём стримы для дней {start}–{end}")
+    print(f"DRY_RUN = {DRY_RUN}")
+
+    youtube = get_youtube_service(YT_SCOPES)
+    existing_titles = load_existing_titles_from_uploads(youtube)
 
     for index in range(start, end + 1):
+
+        # 1) Проверка существования
+        if day_already_has_stream(index, existing_titles):
+            print(f"[{index}] Пропуск.\n")
+            continue
+
+        # 2) Данные нового дня
         d = index_to_date(index)
         start_time = date_to_start_time_rfc3339(d)
-
         thumb_path = SEQUENCE_DIR / f"{index}.jpg"
 
         if not thumb_path.exists():
-            print(f"[{index}] ВНИМАНИЕ: нет файла обложки: {thumb_path}. Пропускаю.")
+            print(f"[{index}] ОШИБКА: нет обложки {thumb_path}. Пропуск.\n")
             continue
 
         playlists = choose_playlists_for_date(d)
 
-        print(f"\n[{index}] Создаю стрим…")
-        print(f"    Дата: {d.isoformat()} (weekday={d.weekday()})")
-        print(f"    Дата/время: {start_time}")
-        print(f"    Обложка: {thumb_path}")
-        print(f"    Плейлисты:")
+        print(f"\n[{index}] Нужно создать стрим:")
+        print(f"    Дата:       {d.isoformat()}")
+        print(f"    Старт:      {start_time}")
+        print(f"    Обложка:    {thumb_path}")
+        print( "    Плейлисты:")
         for _, alias in playlists:
-            print(f"        • {alias}")
+            print(f"      • {alias}")
 
         title = f"{index}. Master's Touch Meditation — Day {index} of 1000"
         description = (
@@ -112,6 +194,11 @@ def main():
             "#LongMeditation #MeditationSadhana #YogaPractice #MeditationLife"
         )
 
+        if DRY_RUN:
+            print(f"[{index}] DRY_RUN: стрим НЕ создаю.\n")
+            continue
+
+        # 3) СОЗДАНИЕ стрима
         try:
             result = schedule_stream(
                 title=title,
@@ -121,14 +208,14 @@ def main():
                 playlist_ids=playlists,
             )
         except Exception as e:
-            print(f"[{index}] ОШИБКА при создании стрима: {e}")
+            print(f"[{index}] ОШИБКА при создании стрима:", e, "\n")
             continue
 
-        print(f"[{index}] Готово.")
-        print(f"    broadcast_id: {result['broadcast_id']}")
-        print(f"    watch_url:    {result['watch_url']}")
-        print(f"    rtmp_url:     {result['rtmp_url']}")
-        print(f"    stream_key:   {result['stream_key']}")
+        print(f"[{index}] Создан:")
+        print("    watch URL:", result["watch_url"])
+        print("    RTMP URL: ", result["rtmp_url"])
+        print("    Stream Key:", result["stream_key"])
+        print()
 
 
 if __name__ == "__main__":
