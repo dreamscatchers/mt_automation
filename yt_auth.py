@@ -7,8 +7,8 @@ from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 
 # Имена файлов по умолчанию
-CLIENT_SECRET_FILE = "client_secret_youtube.json"
-TOKEN_FILE = "token_youtube.json"
+CLIENT_SECRET_FILE = "config/client_secret_youtube.json"
+TOKEN_FILE = "config/token_youtube.json"
 
 
 def get_youtube_service(
