@@ -7,6 +7,8 @@ from datetime import date, timedelta
 from dotenv import load_dotenv
 from yt_stream import schedule_stream, SCOPES as YT_SCOPES
 from yt_auth import get_youtube_service
+from generate_image_gemini import generate_image
+
 
 load_dotenv()
 
@@ -172,9 +174,26 @@ def main():
         start_time = date_to_start_time_rfc3339(d)
         thumb_path = SEQUENCE_DIR / f"{index}.jpg"
 
+        # Если обложки нет — пробуем сгенерировать
         if not thumb_path.exists():
-            print(f"[{index}] ОШИБКА: нет обложки {thumb_path}. Пропуск.\n")
-            continue
+            if DRY_RUN:
+                # В DRY_RUN режиме не тратим запросы к Gemini, просто сообщаем
+                print(f"[{index}] Нет обложки {thumb_path}. DRY_RUN — не генерирую, пропуск.\n")
+                continue
+
+            print(f"[{index}] Нет обложки {thumb_path}, генерирую через Gemini...")
+
+            try:
+                generate_image(index)
+            except Exception as e:
+                print(f"[{index}] ОШИБКА при генерации обложки: {e}. Пропуск.\n")
+                continue
+
+            # На всякий случай проверим ещё раз, что файл появился
+            if not thumb_path.exists():
+                print(f"[{index}] После генерации обложка {thumb_path} не найдена. Пропуск.\n")
+                continue
+
 
         playlists = choose_playlists_for_date(d)
 
