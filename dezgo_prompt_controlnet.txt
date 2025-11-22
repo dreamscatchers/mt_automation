@@ -1,9 +1,0 @@
-Black and white line-art illustration, not photorealistic. 
-Preserve exactly the body pose, hand pose and finger positions from the input image. 
-Keep the arched title text “MASTER'S TOUCH MEDITATION” clearly readable and sharp.
-
-Style: clean vector-style outlines, uniform thin black lines, no shading, no texture, no fabric grain, no 3D, no photorealism, no skin pores. 
-The character must have the same hand mudra as in the input image: index fingers touching to form a small triangle, other fingers curled the same way, thumbs hidden.
-
-Background: simple white or very light, minimal details.
-Negative prompt: photorealistic, 3d render, soft focus, noise, grain, fabric texture, blurry text.
