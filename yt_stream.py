@@ -35,6 +35,8 @@ def create_live_broadcast(
     start_time_rfc3339: str,
     privacy_status: str = "public",
     made_for_kids: bool = False,
+    enable_auto_start: bool = False,
+    enable_auto_stop: bool = False,
 ):
     """Создаёт liveBroadcast и возвращает ответ API."""
     body = {
@@ -48,9 +50,8 @@ def create_live_broadcast(
             "selfDeclaredMadeForKids": made_for_kids,
         },
         "contentDetails": {
-            # Можно включить авто-старт/стоп при желании:
-            "enableAutoStart": False,
-            "enableAutoStop": False,
+            "enableAutoStart": enable_auto_start,
+            "enableAutoStop": enable_auto_stop,
         },
     }
 
@@ -58,6 +59,26 @@ def create_live_broadcast(
         part="snippet,contentDetails,status",
         body=body,
     ).execute()
+
+    return resp
+
+
+def create_live_stream(youtube, title: str):
+    """Создаёт RTMP liveStream и возвращает ответ API."""
+
+    body = {
+        "snippet": {"title": title},
+        "cdn": {"ingestionType": "rtmp"},
+    }
+
+    resp = (
+        youtube.liveStreams()
+        .insert(
+            part="snippet,cdn",
+            body=body,
+        )
+        .execute()
+    )
 
     return resp
 
@@ -119,10 +140,13 @@ def schedule_stream(
     start_time_rfc3339: str,
     thumbnail_path: str,
     playlist_ids: Optional[List[PlaylistSpec]] = None,
+    use_persistent_stream: bool = True,
+    enable_auto_start: bool = False,
+    enable_auto_stop: bool = False,
 ) -> dict:
     """
     Создаёт запланированный стрим, привязывает к ПЕРМАНЕНТНОМУ потоку
-    и добавляет его в плейлисты.
+    (или создаёт отдельный liveStream) и добавляет его в плейлисты.
 
     Сигнатура совместима с рабочим schedule_range.py:
 
@@ -131,22 +155,19 @@ def schedule_stream(
       - start_time_rfc3339: время начала (RFC 3339, с таймзоной)
       - thumbnail_path: путь к JPG-обложке
       - playlist_ids: список кортежей (playlist_id, alias)
+      - use_persistent_stream: True — привязывать к постоянному потоку,
+        False — создавать отдельный liveStream для эфира
+      - enable_auto_start / enable_auto_stop: прокидываются в broadcast
 
     Возвращает dict:
       {
         "broadcast_id": ...,
-        "stream_id":    ... (это PERSISTENT_STREAM_ID),
+        "stream_id":    ... (PERSISTENT_STREAM_ID или созданный),
         "watch_url":    ...,
         "rtmp_url":     ...,
         "stream_key":   ...,
       }
     """
-    if not PERSISTENT_STREAM_ID:
-        raise RuntimeError(
-            "PERSISTENT_STREAM_ID не задан в .env. "
-            "Добавь его в automation/.env."
-        )
-
     # YouTube API клиент
     youtube = get_youtube_service(SCOPES)
 
@@ -156,15 +177,31 @@ def schedule_stream(
         title=title,
         description=description,
         start_time_rfc3339=start_time_rfc3339,
+        enable_auto_start=enable_auto_start,
+        enable_auto_stop=enable_auto_stop,
     )
     broadcast_id = broadcast["id"]
     print("   broadcastId:", broadcast_id)
 
-    print("→ Привязываем broadcast к постоянному потоку…")
+    if use_persistent_stream:
+        if not PERSISTENT_STREAM_ID:
+            raise RuntimeError(
+                "PERSISTENT_STREAM_ID не задан в .env. "
+                "Добавь его в automation/.env."
+            )
+
+        print("→ Привязываем broadcast к постоянному потоку…")
+        stream_id = PERSISTENT_STREAM_ID
+    else:
+        print("→ Создаём отдельный liveStream для этого эфира…")
+        stream_resp = create_live_stream(youtube=youtube, title=title)
+        stream_id = stream_resp["id"]
+        print("   streamId:", stream_id)
+
     bind_broadcast_to_stream(
         youtube=youtube,
         broadcast_id=broadcast_id,
-        stream_id=PERSISTENT_STREAM_ID,
+        stream_id=stream_id,
     )
 
     print("→ Загружаем обложку…")
@@ -174,18 +211,18 @@ def schedule_stream(
         thumbnail_path=thumbnail_path,
     )
 
-    # Получаем RTMP URL и ключ постоянного потока
-    print("→ Получаем данные постоянного потока…")
+    # Получаем RTMP URL и ключ выбранного потока
+    print("→ Получаем данные потока…")
     stream_resp = youtube.liveStreams().list(
         part="cdn",
-        id=PERSISTENT_STREAM_ID,
+        id=stream_id,
     ).execute()
 
     items = stream_resp.get("items", [])
     if not items:
         raise RuntimeError(
-            f"Не найден liveStream с id={PERSISTENT_STREAM_ID}. "
-            "Проверь, что ты указал корректный PERSISTENT_STREAM_ID в .env."
+            f"Не найден liveStream с id={stream_id}. "
+            "Проверь, что ты указал корректный stream id."
         )
 
     ingestion = items[0]["cdn"]["ingestionInfo"]
@@ -211,7 +248,7 @@ def schedule_stream(
 
     return {
         "broadcast_id": broadcast_id,
-        "stream_id": PERSISTENT_STREAM_ID,
+        "stream_id": stream_id,
         "watch_url": watch_url,
         "rtmp_url": rtmp_url,
         "stream_key": stream_key,
