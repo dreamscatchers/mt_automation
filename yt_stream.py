@@ -68,7 +68,11 @@ def create_live_stream(youtube, title: str):
 
     body = {
         "snippet": {"title": title},
-        "cdn": {"ingestionType": "rtmp"},
+        "cdn": {
+            "ingestionType": "rtmp",
+            "resolution": "variable",
+            "frameRate": "variable",
+        },
     }
 
     resp = (
