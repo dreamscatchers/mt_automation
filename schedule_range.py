@@ -187,7 +187,12 @@ def parse_args():
     parser.add_argument(
         "--auto-start-stop",
         action="store_true",
-        help="Enable enableAutoStart and enableAutoStop for all created broadcasts.",
+        help=(
+            "Set enableAutoStart and enableAutoStop on the YouTube broadcast so"
+            " Studio automatically starts and stops the scheduled stream when"
+            " RTMP input arrives from the encoder (e.g. Prism) without manual"
+            " Go Live."
+        ),
     )
 
     return parser.parse_args()
