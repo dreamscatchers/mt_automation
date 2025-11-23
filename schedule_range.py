@@ -174,35 +174,20 @@ def parse_args():
         help="Показывать подробную информацию о уже существующих стримах",
     )
 
-    return parser.parse_args()
-    parser = argparse.ArgumentParser(description="YouTube stream scheduler")
-
     parser.add_argument(
-        "range",
-        help="Диапазон дней, например 285-287"
+        "--stream-mode",
+        choices=["persistent", "unique"],
+        default="persistent",
+        help=(
+            "Stream mode: 'persistent' uses PERSISTENT_STREAM_ID, 'unique' "
+            "creates a new liveStream (new stream key) for each broadcast."
+        ),
     )
 
     parser.add_argument(
-        "--dry-run",
-        dest="dry_run",
+        "--auto-start-stop",
         action="store_true",
-        default=True,
-        help="Запуск в тестовом режиме (по умолчанию включён)"
-    )
-
-    parser.add_argument(
-        "--no-dry-run",
-        dest="dry_run",
-        action="store_false",
-        help="Отключить тестовый режим и выполнять реальные действия"
-    )
-
-    parser.add_argument(
-        "--verbose-existing",
-        "-e",
-        dest="verbose_existing",
-        action="store_true",
-        help="Показывать подробную информацию о уже существующих стримах"
+        help="Enable enableAutoStart and enableAutoStop for all created broadcasts.",
     )
 
     return parser.parse_args()
@@ -233,6 +218,8 @@ def main():
 
     youtube = get_youtube_service(YT_SCOPES)
     existing_titles = load_existing_titles_from_uploads(youtube)
+
+    use_persistent = args.stream_mode == "persistent"
 
     for index in range(start, end + 1):
 
@@ -297,6 +284,9 @@ def main():
                 start_time_rfc3339=start_time,
                 thumbnail_path=str(thumb_path),
                 playlist_ids=playlists,
+                use_persistent_stream=use_persistent,
+                enable_auto_start=args.auto_start_stop,
+                enable_auto_stop=args.auto_start_stop,
             )
         except Exception as e:
             print(f"[{index}] ОШИБКА при создании стрима:", e, "\n")
