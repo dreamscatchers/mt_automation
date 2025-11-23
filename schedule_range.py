@@ -215,6 +215,8 @@ def main():
     print(f"Проверяем / создаём стримы для дней {start}–{end}")
     print(f"DRY_RUN = {DRY_RUN}")
     print(f"VERBOSE_EXISTING = {VERBOSE_EXISTING}")
+    print(f"STREAM_MODE = {args.stream_mode}")
+    print(f"AUTO_START_STOP = {args.auto_start_stop}")
 
     youtube = get_youtube_service(YT_SCOPES)
     existing_titles = load_existing_titles_from_uploads(youtube)
