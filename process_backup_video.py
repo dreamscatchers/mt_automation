@@ -22,7 +22,7 @@ from yt_stream import SCOPES
 BackupVideo = Tuple[str, str, date, Optional[str]]  # (video_id, title, date, published_at)
 
 
-DATE_TITLE_PATTERN = re.compile(r"^VID_(\d{8})_.+")
+DATE_TITLE_PATTERN = re.compile(r"^VID[ _]+(\d{8})[ _].+")
 
 
 def parse_args() -> argparse.Namespace:
