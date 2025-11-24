@@ -3,7 +3,6 @@ import sys
 import os
 import argparse
 
-from pathlib import Path
 from datetime import date
 
 from dotenv import load_dotenv
@@ -11,6 +10,11 @@ from yt_stream import schedule_stream, SCOPES as YT_SCOPES
 from yt_auth import get_youtube_service
 from generate_image_gemini import generate_image
 from day_index import index_to_date
+from mtm_content import (
+    build_stream_description,
+    build_stream_title,
+    get_thumbnail_path,
+)
 
 
 
@@ -21,9 +25,6 @@ load_dotenv()
 # ---------------------------------------------------------
 VERBOSE_EXISTING = False  # True = выводить ВСЕ существующие заголовки
 # ---------------------------------------------------------
-
-# Папка с JPG-обложками
-SEQUENCE_DIR = Path.home() / "projects" / "master_touch_meditation" / "sequence"
 
 # Плейлисты из .env
 GENERAL_PLAYLIST_ID = os.getenv("GENERAL_YT_PLAYLIST_ID")
@@ -238,7 +239,7 @@ def main():
         # 2) Данные нового дня
         d = index_to_date(index)
         start_time = date_to_start_time_rfc3339(d)
-        thumb_path = SEQUENCE_DIR / f"{index}.jpg"
+        thumb_path = get_thumbnail_path(index)
 
         # Если обложки нет — пробуем сгенерировать
         if not thumb_path.exists():
@@ -271,13 +272,8 @@ def main():
         for _, alias in playlists:
             print(f"      • {alias}")
 
-        title = f"{index}. Master's Touch Meditation — Day {index} of 1000"
-        description = (
-            "#YogiBhajan #Meditation #Sadhana #DailyPractice #1000DaysChallenge "
-            "#MastersTouchMeditation #KundaliniYoga #MeditationJourney "
-            "#SpiritualDiscipline #MeditationChallenge #DailyMeditation "
-            "#LongMeditation #MeditationSadhana #YogaPractice #MeditationLife"
-        )
+        title = build_stream_title(index)
+        description = build_stream_description()
 
         if DRY_RUN:
             print(f"[{index}] DRY_RUN: стрим НЕ создаю.\n")
