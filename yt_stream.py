@@ -25,6 +25,12 @@ SCOPES: List[str] = [
 PlaylistSpec = Tuple[str, str]  # (playlist_id, alias)
 
 
+def day_title_key(index: int) -> str:
+    """Return the title fragment used to identify a day's stream."""
+
+    return f"Day {index} of 1000"
+
+
 # --------------------------------------------------------------------
 # Низкоуровневые операции с YouTube API
 # --------------------------------------------------------------------
@@ -133,6 +139,38 @@ def add_video_to_playlist(
         part="snippet",
         body=body,
     ).execute()
+
+
+def load_live_broadcasts(youtube, broadcast_status: str = "all") -> List[dict]:
+    """Return all live broadcasts for the channel."""
+
+    broadcasts: List[dict] = []
+    request = youtube.liveBroadcasts().list(
+        part="id,snippet,status",
+        maxResults=50,
+        broadcastStatus=broadcast_status,
+        mine=True,
+    )
+
+    while request is not None:
+        response = request.execute()
+        broadcasts.extend(response.get("items", []))
+        request = youtube.liveBroadcasts().list_next(request, response)
+
+    return broadcasts
+
+
+def find_broadcast_by_day(index: int, broadcasts: List[dict]) -> Optional[dict]:
+    """Find the first broadcast whose title contains the day key."""
+
+    key = day_title_key(index)
+
+    for item in broadcasts:
+        title = item.get("snippet", {}).get("title", "")
+        if key in title:
+            return item
+
+    return None
 
 
 # --------------------------------------------------------------------
