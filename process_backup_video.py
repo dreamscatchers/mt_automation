@@ -8,6 +8,7 @@ from datetime import date, datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from googleapiclient.http import MediaFileUpload
+from dotenv import dotenv_values
 
 from day_index import date_to_index
 from generate_image_gemini import generate_image
@@ -70,6 +71,16 @@ def parse_target_date(arg_date: Optional[str]) -> date:
         except ValueError:
             raise ValueError("--date должен быть в формате YYYY-MM-DD")
     return date.today()
+
+
+def get_backup_playlist_id() -> str:
+    env = dotenv_values(".env")
+    playlist_id = env.get("BACKUP_YT_PLAYLIST_ID")
+    if not playlist_id:
+        raise RuntimeError(
+            "BACKUP_YT_PLAYLIST_ID не задан в .env — добавьте резервный плейлист"
+        )
+    return playlist_id
 
 
 def get_uploads_playlist_id(youtube) -> str:
@@ -260,6 +271,59 @@ def update_thumbnail(youtube, video_id: str, thumbnail_path: str, dry_run: bool)
     print("Thumbnail обновлён.")
 
 
+def add_video_to_playlist(
+    youtube,
+    playlist_id: str,
+    video_id: str,
+    dry_run: bool,
+) -> None:
+    print(f"Добавление видео в плейлист BACKUP_YT_PLAYLIST_ID={playlist_id}")
+
+    if dry_run:
+        print("DRY_RUN — видео было бы добавлено в плейлист, но вызов API пропущен.")
+        return
+
+    try:
+        req = youtube.playlistItems().list(
+            part="snippet,contentDetails",
+            playlistId=playlist_id,
+            maxResults=50,
+        )
+
+        while req is not None:
+            resp = req.execute()
+            items = resp.get("items", [])
+            for item in items:
+                resource = item.get("snippet", {}).get("resourceId", {})
+                if resource.get("videoId") == video_id:
+                    print("Видео уже есть в плейлисте, пропускаю.")
+                    return
+
+            req = youtube.playlistItems().list_next(
+                previous_request=req, previous_response=resp
+            )
+    except Exception as e:  # noqa: BLE001
+        print(f"Ошибка при проверке плейлиста: {e}")
+        return
+
+    try:
+        youtube.playlistItems().insert(
+            part="snippet",
+            body={
+                "snippet": {
+                    "playlistId": playlist_id,
+                    "resourceId": {
+                        "kind": "youtube#video",
+                        "videoId": video_id,
+                    },
+                }
+            },
+        ).execute()
+        print("Видео добавлено в плейлист.")
+    except Exception as e:  # noqa: BLE001
+        print(f"Ошибка при добавлении видео в плейлист: {e}")
+
+
 def main():
     args = parse_args()
 
@@ -271,6 +335,12 @@ def main():
 
     print(f"Целевая дата резервного видео: {target_date.isoformat()}")
     print(f"DRY_RUN: {args.dry_run}")
+    try:
+        backup_playlist_id = get_backup_playlist_id()
+    except RuntimeError as e:
+        print("Ошибка переменной окружения:", e)
+        sys.exit(1)
+
     youtube = get_youtube_service(SCOPES)
 
     try:
@@ -312,6 +382,13 @@ def main():
         )
     else:
         print("Thumbnail не обновлён (файл отсутствует).")
+
+    add_video_to_playlist(
+        youtube=youtube,
+        playlist_id=backup_playlist_id,
+        video_id=video[0],
+        dry_run=args.dry_run,
+    )
 
 
 if __name__ == "__main__":
