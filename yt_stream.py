@@ -142,13 +142,18 @@ def add_video_to_playlist(
 
 
 def load_live_broadcasts(youtube, broadcast_status: str = "all") -> List[dict]:
-    """Return all live broadcasts for the channel."""
+    """Return live broadcasts for the channel.
+
+    The YouTube API no longer allows combining ``mine`` with
+    ``broadcastStatus``. To keep the same behaviour we fetch everything and
+    filter locally by ``lifeCycleStatus`` when a filter is requested.
+    """
 
     broadcasts: List[dict] = []
     request = youtube.liveBroadcasts().list(
         part="id,snippet,status",
         maxResults=50,
-        broadcastStatus=broadcast_status,
+        broadcastType="all",
         mine=True,
     )
 
@@ -157,7 +162,24 @@ def load_live_broadcasts(youtube, broadcast_status: str = "all") -> List[dict]:
         broadcasts.extend(response.get("items", []))
         request = youtube.liveBroadcasts().list_next(request, response)
 
-    return broadcasts
+    if broadcast_status == "all":
+        return broadcasts
+
+    def matches_status(item: dict) -> bool:
+        status = item.get("status", {}).get("lifeCycleStatus")
+
+        if broadcast_status == "completed":
+            return status == "complete"
+
+        if broadcast_status == "active":
+            return status in {"live", "liveStarting", "testing", "testStarting"}
+
+        if broadcast_status == "upcoming":
+            return status in {"upcoming", "created", "ready"}
+
+        return True
+
+    return [item for item in broadcasts if matches_status(item)]
 
 
 def find_broadcast_by_day(index: int, broadcasts: List[dict]) -> Optional[dict]:
