@@ -18,9 +18,10 @@ from yt_stream import (
     load_live_broadcasts,
 )
 
+RUNTIME_DIR = Path(__file__).resolve().parent / "runtime"
+RUNTIME_DIR.mkdir(exist_ok=True)
 
-POSTED_STREAMS_PATH = Path("posted_streams.json")
-
+POSTED_STREAMS_FILE = RUNTIME_DIR / "posted_streams.json"
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
