@@ -53,10 +53,10 @@ def parse_target_date(raw_date: Optional[str]) -> date:
 
 
 def load_posted_streams() -> Dict[str, bool]:
-    if not POSTED_STREAMS_PATH.exists():
+    if not POSTED_STREAMS_FILE.exists():
         return {}
     try:
-        return json.loads(POSTED_STREAMS_PATH.read_text())
+        return json.loads(POSTED_STREAMS_FILE.read_text())
     except (json.JSONDecodeError, OSError):
         return {}
 
@@ -64,7 +64,7 @@ def load_posted_streams() -> Dict[str, bool]:
 def save_posted_stream(broadcast_id: str) -> None:
     data = load_posted_streams()
     data[broadcast_id] = True
-    POSTED_STREAMS_PATH.write_text(json.dumps(data, indent=2))
+    POSTED_STREAMS_FILE.write_text(json.dumps(data, indent=2))
 
 
 def get_broadcast_status(youtube, broadcast_id: str) -> tuple[str, bool]:
