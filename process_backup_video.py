@@ -21,6 +21,7 @@ from yt_auth import get_youtube_service
 from yt_stream import SCOPES
 
 BackupVideo = Tuple[str, str, date, Optional[str]]  # (video_id, title, date, published_at)
+ProcessedVideo = Tuple[str, str, Optional[str]]  # (video_id, title, published_at)
 
 
 DATE_TITLE_PATTERN = re.compile(r"^VID[ _]+(\d{8})[ _].+")
@@ -175,6 +176,48 @@ def find_backup_video(
         )
         for c in candidates:
             print(f"  • {c[0]} — {c[1]} — {c[3]}")
+
+    return candidates[0]
+
+
+def find_processed_video(
+    items: List[Dict[str, Any]],
+    index: int,
+    verbose: bool = False,
+) -> Optional[ProcessedVideo]:
+    title = build_stream_title(index)
+    candidates: List[ProcessedVideo] = []
+
+    for item in items:
+        snippet = item.get("snippet", {})
+        if snippet.get("title") != title:
+            continue
+
+        video_id = snippet.get("resourceId", {}).get("videoId")
+        if not video_id:
+            continue
+
+        published = (
+            item.get("contentDetails", {}).get("videoPublishedAt")
+            or snippet.get("publishedAt")
+        )
+        candidates.append((video_id, title, published))
+
+    if not candidates:
+        return None
+
+    def sort_key(entry: ProcessedVideo):
+        _, _, published = entry
+        dt = to_datetime_or_none(published)
+        return dt or datetime.min
+
+    candidates.sort(key=sort_key, reverse=True)
+    if verbose and len(candidates) > 1:
+        print(
+            "Найдено несколько оформленных видео за дату, выберу самое свежее по publishedAt:"
+        )
+        for c in candidates:
+            print(f"  • {c[0]} — {c[1]} — {c[2]}")
 
     return candidates[0]
 
@@ -352,6 +395,22 @@ def main():
     video = find_backup_video(items, target_date, verbose=args.verbose)
     if not video:
         print("Видео с нужной датой не найдено в uploads playlist.")
+        try:
+            index = date_to_index(target_date)
+        except ValueError as e:
+            print("Ошибка при вычислении номера дня:", e)
+            sys.exit(1)
+
+        processed = find_processed_video(items, index=index, verbose=args.verbose)
+        if processed:
+            video_id, processed_title, published_at = processed
+            print("Резервное видео за эту дату уже оформлено:")
+            print(f"  videoId:     {video_id}")
+            print(f"  title:       {processed_title}")
+            print(f"  publishedAt: {published_at}")
+            print("Дальнейшие действия не требуются.")
+            sys.exit(0)
+
         sys.exit(1)
 
     print_video_info(video)
