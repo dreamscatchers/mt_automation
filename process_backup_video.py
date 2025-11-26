@@ -25,6 +25,7 @@ ProcessedVideo = Tuple[str, str, Optional[str]]  # (video_id, title, published_a
 
 
 DATE_TITLE_PATTERN = re.compile(r"^VID[ _]+(\d{8})[ _].+")
+ALT_DATE_TITLE_PATTERN = re.compile(r"([A-Za-z]+ \d{1,2}, \d{4})")
 
 
 def parse_args() -> argparse.Namespace:
@@ -94,13 +95,22 @@ def get_uploads_playlist_id(youtube) -> str:
 
 def extract_date_from_title(title: str) -> Optional[date]:
     match = DATE_TITLE_PATTERN.match(title)
-    if not match:
-        return None
-    raw_date = match.group(1)
-    try:
-        return datetime.strptime(raw_date, "%Y%m%d").date()
-    except ValueError:
-        return None
+    if match:
+        raw_date = match.group(1)
+        try:
+            return datetime.strptime(raw_date, "%Y%m%d").date()
+        except ValueError:
+            return None
+
+    alt_match = ALT_DATE_TITLE_PATTERN.search(title)
+    if alt_match:
+        raw_date = alt_match.group(1)
+        try:
+            return datetime.strptime(raw_date, "%B %d, %Y").date()
+        except ValueError:
+            return None
+
+    return None
 
 
 def load_uploads_items(youtube, verbose: bool = False) -> List[Dict[str, Any]]:
