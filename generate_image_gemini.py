@@ -71,6 +71,11 @@ def generate_image(day_number: int) -> None:
         raise RuntimeError("Модель не вернула изображение")
 
     img = Image.open(BytesIO(image_bytes))
+    w, h = img.size
+    target_h = int(round(w * 9 / 16))
+    if target_h < h:
+        crop_y = (h - target_h) // 2
+        img = img.crop((0, crop_y, w, crop_y + target_h))
 
     png_path, jpg_path = _get_output_paths(day_number)
 
