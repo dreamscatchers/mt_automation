@@ -129,3 +129,71 @@ function testCreateLiveBroadcastInsert() {
   Logger.log('snippet.scheduledStartTime=%s', snippet && snippet.scheduledStartTime);
   Logger.log('status.privacyStatus=%s', status && status.privacyStatus);
 }
+
+function createLiveStream_(title, options) {
+  if (!title || typeof title !== 'string') {
+    throw new Error('title is required');
+  }
+
+  options = options || {};
+
+  var description = options.description || '';
+  if (typeof description !== 'string') {
+    throw new Error('description must be a string');
+  }
+
+  var resolution = options.resolution || '1080p';
+  var allowedResolutions = ['240p', '360p', '480p', '720p', '1080p', '1440p', '2160p', 'variable'];
+  if (allowedResolutions.indexOf(resolution) === -1) {
+    throw new Error('resolution must be one of ' + allowedResolutions.join(', '));
+  }
+
+  var frameRate = options.frameRate || '30fps';
+  var allowedFrameRates = ['variable', '30fps', '60fps'];
+  if (allowedFrameRates.indexOf(frameRate) === -1) {
+    throw new Error('frameRate must be one of ' + allowedFrameRates.join(', '));
+  }
+
+  var ingestionType = options.ingestionType || 'rtmp';
+  var allowedIngestionTypes = ['rtmp'];
+  if (allowedIngestionTypes.indexOf(ingestionType) === -1) {
+    throw new Error('ingestionType must be one of ' + allowedIngestionTypes.join(', '));
+  }
+
+  var isReusable = options.hasOwnProperty('isReusable') ? Boolean(options.isReusable) : true;
+
+  var body = {
+    snippet: {
+      title: title,
+      description: description
+    },
+    cdn: {
+      resolution: resolution,
+      frameRate: frameRate,
+      ingestionType: ingestionType
+    },
+    contentDetails: {
+      isReusable: isReusable
+    }
+  };
+
+  return YouTube.LiveStreams.insert(body, 'id,snippet,cdn,contentDetails,status');
+}
+
+function testCreateLiveStreamInsert() {
+  var title = 'Test stream ' + new Date().toISOString();
+
+  var stream = createLiveStream_(title, {
+    description: 'Test reusable stream key',
+    resolution: '1080p',
+    frameRate: '30fps',
+    ingestionType: 'rtmp',
+    isReusable: true
+  });
+
+  Logger.log('stream.id=%s', stream && stream.id);
+  var cdn = stream && stream.cdn;
+  var ingestion = cdn && cdn.ingestionInfo;
+  Logger.log('cdn.ingestionInfo.ingestionAddress=%s', ingestion && ingestion.ingestionAddress);
+  Logger.log('cdn.ingestionInfo.streamName=%s', ingestion && ingestion.streamName);
+}
