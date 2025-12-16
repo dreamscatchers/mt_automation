@@ -180,6 +180,47 @@ function createLiveStream_(title, options) {
   return YouTube.LiveStreams.insert(body, 'id,snippet,cdn,contentDetails,status');
 }
 
+function bindBroadcastToStream_(broadcastId, streamId) {
+  if (!broadcastId || typeof broadcastId !== 'string') {
+    throw new Error('broadcastId is required');
+  }
+
+  if (!streamId || typeof streamId !== 'string') {
+    throw new Error('streamId is required');
+  }
+
+  var params = {
+    streamId: streamId
+  };
+
+  // Apps Script expects the part string first, the broadcast id second, and params third.
+  return YouTube.LiveBroadcasts.bind('id,snippet,contentDetails,status', broadcastId, params);
+}
+
+function testBindBroadcastToStream_() {
+  var start = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+  var title = 'Test bind broadcast ' + new Date().toISOString();
+
+  var broadcast = createLiveBroadcast_(title, 'Test scheduled broadcast', start, 'private');
+  var stream = createLiveStream_('Test stream for bind ' + new Date().toISOString(), {
+    description: 'Reusable stream for bind',
+    isReusable: true
+  });
+
+  var boundBroadcast = bindBroadcastToStream_(broadcast.id, stream.id);
+
+  Logger.log('broadcast.id=%s', broadcast && broadcast.id);
+  Logger.log('stream.id=%s', stream && stream.id);
+
+  var contentDetails = boundBroadcast && boundBroadcast.contentDetails;
+  var status = boundBroadcast && boundBroadcast.status;
+  var snippet = boundBroadcast && boundBroadcast.snippet;
+
+  Logger.log('boundBroadcast.contentDetails.boundStreamId=%s', contentDetails && contentDetails.boundStreamId);
+  Logger.log('boundBroadcast.status.lifeCycleStatus=%s', status && status.lifeCycleStatus);
+  Logger.log('boundBroadcast.snippet.title=%s', snippet && snippet.title);
+}
+
 function testCreateLiveStreamInsert() {
   var title = 'Test stream ' + new Date().toISOString();
 
