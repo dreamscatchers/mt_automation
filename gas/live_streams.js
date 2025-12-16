@@ -180,7 +180,7 @@ function createLiveStream_(title, options) {
   return YouTube.LiveStreams.insert(body, 'id,snippet,cdn,contentDetails,status');
 }
 
-function bindBroadcastToStream_(broadcastId, streamId) {
+function bindBroadcastToStream_(broadcastId, streamId, options) {
   if (typeof broadcastId !== 'string' || broadcastId.trim() === '') {
     throw new Error('broadcastId is required');
   }
@@ -189,12 +189,38 @@ function bindBroadcastToStream_(broadcastId, streamId) {
     throw new Error('streamId is required');
   }
 
+  options = options || {};
+  var maxAttempts = Math.max(1, options.maxAttempts || 3);
+  var delayMs = Math.max(0, options.delayMs || 1000);
+
   var params = {
     streamId: streamId
   };
 
-  // Apps Script expects the part string first, the broadcast id second, and params third.
-  return YouTube.LiveBroadcasts.bind('id,snippet,contentDetails,status', broadcastId, params);
+  var lastError;
+
+  for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      // Apps Script expects the part string first, the broadcast id second, and params third.
+      return YouTube.LiveBroadcasts.bind('id,snippet,contentDetails,status', broadcastId, params);
+    } catch (err) {
+      lastError = err;
+
+      var isLastAttempt = attempt === maxAttempts;
+      var message = err && err.message || '';
+      var isPropagatingError = message.indexOf(streamId) !== -1 || message.indexOf(broadcastId) !== -1;
+
+      if (!isLastAttempt && isPropagatingError) {
+        Utilities.sleep(delayMs);
+        delayMs *= 2;
+        continue;
+      }
+
+      throw new Error('Failed to bind broadcast ' + broadcastId + ' to stream ' + streamId + ': ' + message);
+    }
+  }
+
+  throw lastError;
 }
 
 function testBindBroadcastToStream_() {
@@ -237,7 +263,7 @@ function sanitizeBoundBroadcastForLog_(boundBroadcast) {
   return sanitized;
 }
 
-function testCreateAndBindBroadcastAndStream_() {
+function testCreateAndBindBroadcastAndStream() {
   var scheduledStartTime = new Date(Date.now() + 30 * 60 * 1000).toISOString();
   var broadcastTitle = 'Manual bind test ' + new Date().toISOString();
   var streamTitle = 'Manual stream for bind ' + new Date().toISOString();
