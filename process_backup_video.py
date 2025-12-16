@@ -396,6 +396,9 @@ def main():
 
     youtube = get_youtube_service(SCOPES)
 
+    if youtube is None:
+        return
+
     try:
         items = load_uploads_items(youtube, verbose=args.verbose)
     except Exception as e:  # noqa: BLE001
