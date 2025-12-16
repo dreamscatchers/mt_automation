@@ -5,23 +5,21 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from datetime import date
 from pathlib import Path
 from typing import Dict, Optional
 
+import requests
+
 from day_index import date_to_index
 from facebook_post import post_message
-from yt_auth import get_youtube_service
-from yt_stream import (
-    SCOPES as YT_SCOPES,
-    find_broadcast_by_day,
-    load_live_broadcasts,
-)
 
 RUNTIME_DIR = Path(__file__).resolve().parent / "runtime"
 RUNTIME_DIR.mkdir(exist_ok=True)
 
 POSTED_STREAMS_FILE = RUNTIME_DIR / "posted_streams.json"
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -61,25 +59,10 @@ def load_posted_streams() -> Dict[str, bool]:
         return {}
 
 
-def save_posted_stream(broadcast_id: str) -> None:
+def save_posted_stream(identifier: str) -> None:
     data = load_posted_streams()
-    data[broadcast_id] = True
+    data[identifier] = True
     POSTED_STREAMS_FILE.write_text(json.dumps(data, indent=2))
-
-
-def get_broadcast_status(youtube, broadcast_id: str) -> tuple[str, bool]:
-    resp = youtube.liveBroadcasts().list(
-        part="status,contentDetails", id=broadcast_id
-    ).execute()
-    items = resp.get("items", [])
-    if not items:
-        return "not found", False
-
-    item = items[0]
-    status = item.get("status", {}).get("lifeCycleStatus", "unknown")
-    content_details = item.get("contentDetails", {})
-    finished = status == "complete" or bool(content_details.get("actualEndTime"))
-    return status, finished
 
 
 def build_message(index: int) -> str:
@@ -87,6 +70,32 @@ def build_message(index: int) -> str:
         f"Master's touch meditation, day {index}.\n"
         f"Meditación del toque del Maestro, día {index}."
     )
+
+
+def fetch_finished_status(day: str) -> dict | None:
+    gas_url = os.getenv("GAS_WEBAPP_URL")
+    gas_token = os.getenv("GAS_WEBAPP_TOKEN")
+
+    if not gas_url or not gas_token:
+        print("GAS_WEBAPP_URL или GAS_WEBAPP_TOKEN не заданы — выполнение остановлено.")
+        return None
+
+    try:
+        response = requests.get(
+            gas_url,
+            params={"ep": "finishedOnDay", "day": day, "token": gas_token},
+            timeout=15,
+        )
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        print(f"Ошибка сети при обращении к GAS: {exc}")
+        return None
+
+    try:
+        return response.json()
+    except ValueError:
+        print("Не удалось распарсить JSON-ответ от GAS.")
+        return None
 
 
 def main() -> None:
@@ -104,55 +113,48 @@ def main() -> None:
         print(f"Ошибка вычисления номера дня: {exc}")
         return
 
-    print(f"Дата: {target_date.isoformat()}")
+    day = target_date.isoformat()
+    print(f"Дата: {day}")
     print(f"Номер дня: {index}")
 
-    youtube = get_youtube_service(YT_SCOPES)
-
-    if youtube is None:
+    status = fetch_finished_status(day)
+    if status is None:
         return
 
-    broadcasts = load_live_broadcasts(youtube)
-    broadcast = find_broadcast_by_day(index, broadcasts)
-    if not broadcast:
-        print("Стрим для этого дня не найден — публикация невозможна.")
+    if status.get("ok") is not True:
+        print("GAS вернул ошибку (ok != true) — выполнение остановлено.")
         return
 
-    broadcast_id = broadcast.get("id")
-    if not broadcast_id:
-        print("Не удалось получить broadcast_id для этого дня.")
+    if not status.get("found"):
+        print("Стрим ещё не завершён — публикация пропущена.")
         return
 
-    print("Стрим найден.")
-    print(f"broadcast_id: {broadcast_id}")
-    status, finished = get_broadcast_status(youtube, broadcast_id)
-    print(f"Статус трансляции: {status}")
-
-    if not finished:
-        print("Трансляция ещё не завершена — публикация пропущена.")
-        return
+    stream = status.get("stream") or {}
+    stream_url = stream.get("url") if isinstance(stream, dict) else None
 
     posted = load_posted_streams()
-    if broadcast_id in posted:
+    identifier = stream_url or day
+
+    if identifier in posted:
         print("Этот стрим уже опубликован в Facebook — пропуск.")
         return
 
     message = build_message(index)
-    youtube_url = f"https://youtube.com/live/{broadcast_id}"
 
     if args.dry_run:
         print("Dry run: would post to Facebook.")
         print(message)
-        print(youtube_url)
+        if stream_url:
+            print(stream_url)
         return
 
     try:
-        post_message(message, link=youtube_url)
+        post_message(message, link=stream_url)
     except Exception as exc:  # noqa: BLE001
         print(f"Ошибка публикации в Facebook: {exc}")
         return
 
-    save_posted_stream(broadcast_id)
+    save_posted_stream(identifier)
     print("Пост опубликован и отмечен в posted_streams.json.")
 
 
