@@ -72,3 +72,59 @@ function getLastStreamFinishedOnLocalDay_(dayYmd, options) {
   var list = getStreamsFinishedOnLocalDay_(dayYmd, options);
   return list.length ? list[list.length - 1] : null; // список уже отсортирован по actualEndTimeUtc
 }
+
+function createLiveBroadcast_(title, description, scheduledStartTime, privacyStatus) {
+  if (!title || typeof title !== 'string') {
+    throw new Error('title is required');
+  }
+
+  if (!description || typeof description !== 'string') {
+    throw new Error('description is required');
+  }
+
+  if (!scheduledStartTime || typeof scheduledStartTime !== 'string') {
+    throw new Error('scheduledStartTime is required');
+  }
+
+  var isoPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}:\d{2}|Z)$/;
+  if (!isoPattern.test(scheduledStartTime) || isNaN(new Date(scheduledStartTime).getTime())) {
+    throw new Error('scheduledStartTime must be ISO 8601 with timezone');
+  }
+
+  var status = privacyStatus || 'unlisted';
+  var allowedPrivacyStatuses = ['private', 'unlisted', 'public'];
+  if (allowedPrivacyStatuses.indexOf(status) === -1) {
+    throw new Error('privacyStatus must be one of private, unlisted, public');
+  }
+
+  var body = {
+    snippet: {
+      title: title,
+      description: description,
+      scheduledStartTime: scheduledStartTime
+    },
+    status: {
+      privacyStatus: status
+    },
+    contentDetails: {
+      enableAutoStart: true,
+      enableAutoStop: true
+    }
+  };
+
+  return YouTube.LiveBroadcasts.insert('id,snippet,contentDetails,status', body);
+}
+
+function testCreateLiveBroadcastInsert() {
+  var start = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+  var title = 'Test broadcast ' + new Date().toISOString();
+
+  var broadcast = createLiveBroadcast_(title, 'Test scheduled broadcast', start, 'private');
+
+  Logger.log('broadcast.id=%s', broadcast && broadcast.id);
+  var snippet = broadcast && broadcast.snippet;
+  var status = broadcast && broadcast.status;
+  Logger.log('snippet.title=%s', snippet && snippet.title);
+  Logger.log('snippet.scheduledStartTime=%s', snippet && snippet.scheduledStartTime);
+  Logger.log('status.privacyStatus=%s', status && status.privacyStatus);
+}
