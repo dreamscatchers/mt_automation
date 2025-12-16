@@ -231,8 +231,8 @@ function bindBroadcastToStream_(broadcastId, streamId, options) {
 
   for (var attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      // Apps Script expects the part string first, the broadcast id second, and params third.
-      return YouTube.LiveBroadcasts.bind('id,snippet,contentDetails,status', broadcastId, params);
+      // In Apps Script the broadcast id goes first, followed by the part string and params.
+      return YouTube.LiveBroadcasts.bind(broadcastId, 'id,snippet,contentDetails,status', params);
     } catch (err) {
       lastError = err;
 
