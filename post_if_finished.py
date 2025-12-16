@@ -109,6 +109,9 @@ def main() -> None:
 
     youtube = get_youtube_service(YT_SCOPES)
 
+    if youtube is None:
+        return
+
     broadcasts = load_live_broadcasts(youtube)
     broadcast = find_broadcast_by_day(index, broadcasts)
     if not broadcast:
