@@ -32,3 +32,7 @@ This repository automates daily content production for the **Master's Touch Medi
 - Day numbering is 1-based from 2025-02-20; titles follow `"<n>. Master's Touch Meditation — Day <n> of 1000"`.
 - Sunday thumbnails force a red-only palette (handled in `prompt_generator.choose_palette`).
 - DRY-RUN modes avoid YouTube writes and Gemini calls while printing planned actions.
+
+## Google Apps Script (GAS)
+YouTube Data API v3 и Advanced Google Services уже подключены и используются.
+GAS применяется для выполнения операций записи в YouTube (обновление метаданных, работа с трансляциями и триггерами) с целью обхода проблем с OAuth refresh token в Python-части проекта.
