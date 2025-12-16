@@ -198,6 +198,36 @@ function bindBroadcastToStream_(broadcastId, streamId, options) {
   };
 
   var lastError;
+  var logAttempt = function(attempt, maxAttempts, err) {
+    var message = err && err.message;
+    var details = err && err.details;
+
+    var detailsText = '';
+    if (Array.isArray(details) && details.length > 0) {
+      detailsText = details
+        .map(function(d) {
+          var parts = [];
+          if (d.reason) parts.push('reason=' + d.reason);
+          if (d.message) parts.push('message=' + d.message);
+          if (d.location) parts.push('location=' + d.location);
+          return parts.join(', ');
+        })
+        .join('; ');
+    }
+
+    Logger.log(
+      'bind attempt %s/%s broadcastId=%s streamId=%s error=%s details=%s stack=%s',
+      attempt,
+      maxAttempts,
+      broadcastId,
+      streamId,
+      message,
+      detailsText,
+      err && err.stack
+    );
+
+    return detailsText;
+  };
 
   for (var attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -205,6 +235,8 @@ function bindBroadcastToStream_(broadcastId, streamId, options) {
       return YouTube.LiveBroadcasts.bind('id,snippet,contentDetails,status', broadcastId, params);
     } catch (err) {
       lastError = err;
+
+      var detailsText = logAttempt(attempt, maxAttempts, err);
 
       var isLastAttempt = attempt === maxAttempts;
       var message = err && err.message || '';
@@ -216,7 +248,17 @@ function bindBroadcastToStream_(broadcastId, streamId, options) {
         continue;
       }
 
-      throw new Error('Failed to bind broadcast ' + broadcastId + ' to stream ' + streamId + ': ' + message);
+      throw new Error(
+        'Failed to bind broadcast ' +
+          broadcastId +
+          ' to stream ' +
+          streamId +
+          ' after ' +
+          attempt +
+          ' attempts: ' +
+          message +
+          (detailsText ? ' | details: ' + detailsText : '')
+      );
     }
   }
 
