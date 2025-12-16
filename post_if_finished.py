@@ -10,10 +10,14 @@ from datetime import date
 from pathlib import Path
 from typing import Dict, Optional
 
+from dotenv import load_dotenv
+
 import requests
 
 from day_index import date_to_index
 from facebook_post import post_message
+
+load_dotenv()
 
 RUNTIME_DIR = Path(__file__).resolve().parent / "runtime"
 RUNTIME_DIR.mkdir(exist_ok=True)
@@ -77,8 +81,7 @@ def fetch_finished_status(day: str) -> dict | None:
     gas_token = os.getenv("GAS_WEBAPP_TOKEN")
 
     if not gas_url or not gas_token:
-        print("GAS_WEBAPP_URL или GAS_WEBAPP_TOKEN не заданы — выполнение остановлено.")
-        return None
+        raise RuntimeError("GAS_WEBAPP_URL or GAS_WEBAPP_TOKEN not set (check .env)")
 
     try:
         response = requests.get(
