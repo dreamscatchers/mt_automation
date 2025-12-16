@@ -405,25 +405,25 @@ def main():
         print("Ошибка при загрузке списка видео:", e)
         sys.exit(1)
 
+    try:
+        index = date_to_index(target_date)
+    except ValueError as e:
+        print("Ошибка при вычислении номера дня:", e)
+        sys.exit(1)
+
+    processed = find_processed_video(items, index=index, verbose=args.verbose)
+    if processed:
+        video_id, processed_title, published_at = processed
+        print("Резервное видео за эту дату уже оформлено:")
+        print(f"  videoId:     {video_id}")
+        print(f"  title:       {processed_title}")
+        print(f"  publishedAt: {published_at}")
+        print("Дальнейшие действия не требуются.")
+        sys.exit(0)
+
     video = find_backup_video(items, target_date, verbose=args.verbose)
     if not video:
         print("Видео с нужной датой не найдено в uploads playlist.")
-        try:
-            index = date_to_index(target_date)
-        except ValueError as e:
-            print("Ошибка при вычислении номера дня:", e)
-            sys.exit(1)
-
-        processed = find_processed_video(items, index=index, verbose=args.verbose)
-        if processed:
-            video_id, processed_title, published_at = processed
-            print("Резервное видео за эту дату уже оформлено:")
-            print(f"  videoId:     {video_id}")
-            print(f"  title:       {processed_title}")
-            print(f"  publishedAt: {published_at}")
-            print("Дальнейшие действия не требуются.")
-            sys.exit(0)
-
         sys.exit(1)
 
     print_video_info(video)
