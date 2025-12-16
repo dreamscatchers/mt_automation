@@ -20,7 +20,7 @@ function createPersistentReusableStream() {
     }
   };
 
-  var response = YouTube.LiveStreams.insert(request, 'id,snippet');
+  var response = YouTube.LiveStreams.insert(request, 'snippet,cdn,contentDetails');
   var stream = response && response.id ? response : null;
 
   if (!stream) {
