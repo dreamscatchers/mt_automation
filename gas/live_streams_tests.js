@@ -12,94 +12,35 @@ function testCreateLiveBroadcastInsert() {
   Logger.log('status.privacyStatus=%s', status && status.privacyStatus);
 }
 
-function testBindBroadcastToStream_() {
-  var start = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-  var title = 'Test bind broadcast ' + new Date().toISOString();
-
-  var broadcast = createLiveBroadcast_(title, 'Test scheduled broadcast', start, 'private');
-  var stream = createLiveStream_('Test stream for bind ' + new Date().toISOString(), {
-    description: 'Reusable stream for bind',
-    isReusable: true
-  });
-
-  var boundBroadcast = bindBroadcastToStream_(broadcast.id, stream.id);
-
-  Logger.log('broadcast.id=%s', broadcast && broadcast.id);
-  Logger.log('stream.id=%s', stream && stream.id);
-
-  var contentDetails = boundBroadcast && boundBroadcast.contentDetails;
-  var status = boundBroadcast && boundBroadcast.status;
-  var snippet = boundBroadcast && boundBroadcast.snippet;
-
-  Logger.log('boundBroadcast.contentDetails.boundStreamId=%s', contentDetails && contentDetails.boundStreamId);
-  Logger.log('boundBroadcast.status.lifeCycleStatus=%s', status && status.lifeCycleStatus);
-  Logger.log('boundBroadcast.snippet.title=%s', snippet && snippet.title);
-}
-
-function sanitizeBoundBroadcastForLog_(boundBroadcast) {
-  if (!boundBroadcast) return boundBroadcast;
-
-  var sanitized = JSON.parse(JSON.stringify(boundBroadcast));
-
-  var cdn = sanitized.cdn || {};
-  var ingestionInfo = cdn.ingestionInfo || {};
-  if (ingestionInfo.streamName) {
-    ingestionInfo.streamName = '[sanitized]';
-    cdn.ingestionInfo = ingestionInfo;
-    sanitized.cdn = cdn;
-  }
-
-  return sanitized;
-}
-
-function testCreateAndBindBroadcastAndStream() {
+function testCreateBroadcastAndBindToPersistentStream_() {
   var scheduledStartTime = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-  var broadcastTitle = 'Manual bind test ' + new Date().toISOString();
+  var broadcastTitle = 'Bind to persistent stream ' + new Date().toISOString();
 
-  var broadcast = createLiveBroadcast_(broadcastTitle, 'Manual end-to-end test', scheduledStartTime, 'private');
-  var stream = getPermanentLiveStream_();
+  var broadcast = createLiveBroadcast_(
+    broadcastTitle,
+    'Scheduled broadcast bound to persistent stream',
+    scheduledStartTime,
+    'private'
+  );
 
-  var boundBroadcast = bindBroadcastToStream_(broadcast.id, stream.id);
+  var persistentStream = getPersistentStream_();
+
+  var boundBroadcast = bindBroadcastToStream_(broadcast.id, persistentStream.id);
 
   var broadcastSnippet = broadcast && broadcast.snippet;
-  var broadcastStatus = broadcast && broadcast.status;
-  var streamSnippet = stream && stream.snippet;
-  var streamCdn = stream && stream.cdn;
-  var ingestionInfo = streamCdn && streamCdn.ingestionInfo;
+  var persistentStreamSnippet = persistentStream && persistentStream.snippet;
   var boundContentDetails = boundBroadcast && boundBroadcast.contentDetails;
   var boundStatus = boundBroadcast && boundBroadcast.status;
 
   Logger.log('broadcast.id=%s', broadcast && broadcast.id);
   Logger.log('broadcast.snippet.title=%s', broadcastSnippet && broadcastSnippet.title);
   Logger.log('broadcast.snippet.scheduledStartTime=%s', broadcastSnippet && broadcastSnippet.scheduledStartTime);
-  Logger.log('broadcast.status.privacyStatus=%s', broadcastStatus && broadcastStatus.privacyStatus);
 
-  Logger.log('permanentStream.id=%s', stream && stream.id);
-  Logger.log('permanentStream.snippet.title=%s', streamSnippet && streamSnippet.title);
-  Logger.log('permanentStream.cdn.ingestionInfo.ingestionAddress=%s', ingestionInfo && ingestionInfo.ingestionAddress);
+  Logger.log('persistentStream.id=%s', persistentStream && persistentStream.id);
+  Logger.log('persistentStream.snippet.title=%s', persistentStreamSnippet && persistentStreamSnippet.title);
 
-  Logger.log('boundBroadcast.id=%s', boundBroadcast && boundBroadcast.id);
   Logger.log('boundBroadcast.contentDetails.boundStreamId=%s', boundContentDetails && boundContentDetails.boundStreamId);
-  Logger.log('boundBroadcast.status.lifeCycleStatus=%s', boundStatus && boundStatus.lifeCycleStatus);
-
-  var sanitizedBound = sanitizeBoundBroadcastForLog_(boundBroadcast);
-  Logger.log('boundBroadcast (sanitized JSON)=%s', JSON.stringify(sanitizedBound));
-}
-
-function testCreateLiveStreamInsert() {
-  var title = 'Test stream ' + new Date().toISOString();
-
-  var stream = createLiveStream_(title, {
-    description: 'Test reusable stream key',
-    resolution: '1080p',
-    frameRate: '30fps',
-    ingestionType: 'rtmp',
-    isReusable: true
-  });
-
-  Logger.log('stream.id=%s', stream && stream.id);
-  var cdn = stream && stream.cdn;
-  var ingestion = cdn && cdn.ingestionInfo;
-  Logger.log('cdn.ingestionInfo.ingestionAddress=%s', ingestion && ingestion.ingestionAddress);
-  Logger.log('cdn.ingestionInfo.streamName=%s', ingestion && ingestion.streamName);
+  if (boundStatus && boundStatus.lifeCycleStatus) {
+    Logger.log('boundBroadcast.status.lifeCycleStatus=%s', boundStatus.lifeCycleStatus);
+  }
 }
