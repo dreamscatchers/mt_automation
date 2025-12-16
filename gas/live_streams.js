@@ -112,7 +112,8 @@ function createLiveBroadcast_(title, description, scheduledStartTime, privacySta
     }
   };
 
-  return YouTube.LiveBroadcasts.insert('id,snippet,contentDetails,status', body);
+  // Apps Script expects the resource object as the first argument and the part string second.
+  return YouTube.LiveBroadcasts.insert(body, 'id,snippet,contentDetails,status');
 }
 
 function testCreateLiveBroadcastInsert() {
