@@ -166,6 +166,27 @@ function createLiveStream_(title, options) {
   return YouTube.LiveStreams.insert(body, 'id,snippet,cdn,contentDetails,status');
 }
 
+function getPermanentLiveStream_() {
+  if (typeof YT_PERMANENT_STREAM_ID === 'undefined') {
+    throw new Error('YT_PERMANENT_STREAM_ID is not defined');
+  }
+
+  var streamId = YT_PERMANENT_STREAM_ID;
+
+  if (typeof streamId !== 'string' || streamId.trim() === '') {
+    throw new Error('YT_PERMANENT_STREAM_ID must be a non-empty string');
+  }
+
+  var resp = YouTube.LiveStreams.list('id,snippet,cdn,contentDetails,status', { id: streamId });
+  var items = (resp && resp.items) || [];
+
+  if (items.length !== 1) {
+    throw new Error('Expected exactly one live stream for YT_PERMANENT_STREAM_ID, got ' + items.length);
+  }
+
+  return items[0];
+}
+
 function bindBroadcastToStream_(broadcastId, streamId, options) {
   if (typeof broadcastId !== 'string' || broadcastId.trim() === '') {
     throw new Error('broadcastId is required');

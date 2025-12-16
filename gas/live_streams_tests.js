@@ -55,18 +55,15 @@ function sanitizeBoundBroadcastForLog_(boundBroadcast) {
 function testCreateAndBindBroadcastAndStream() {
   var scheduledStartTime = new Date(Date.now() + 30 * 60 * 1000).toISOString();
   var broadcastTitle = 'Manual bind test ' + new Date().toISOString();
-  var streamTitle = 'Manual stream for bind ' + new Date().toISOString();
 
   var broadcast = createLiveBroadcast_(broadcastTitle, 'Manual end-to-end test', scheduledStartTime, 'private');
-  var stream = createLiveStream_(streamTitle, {
-    description: 'Manual end-to-end bind test stream',
-    isReusable: true
-  });
+  var stream = getPermanentLiveStream_();
 
   var boundBroadcast = bindBroadcastToStream_(broadcast.id, stream.id);
 
   var broadcastSnippet = broadcast && broadcast.snippet;
   var broadcastStatus = broadcast && broadcast.status;
+  var streamSnippet = stream && stream.snippet;
   var streamCdn = stream && stream.cdn;
   var ingestionInfo = streamCdn && streamCdn.ingestionInfo;
   var boundContentDetails = boundBroadcast && boundBroadcast.contentDetails;
@@ -77,8 +74,9 @@ function testCreateAndBindBroadcastAndStream() {
   Logger.log('broadcast.snippet.scheduledStartTime=%s', broadcastSnippet && broadcastSnippet.scheduledStartTime);
   Logger.log('broadcast.status.privacyStatus=%s', broadcastStatus && broadcastStatus.privacyStatus);
 
-  Logger.log('stream.id=%s', stream && stream.id);
-  Logger.log('stream.cdn.ingestionInfo.ingestionAddress=%s', ingestionInfo && ingestionInfo.ingestionAddress);
+  Logger.log('permanentStream.id=%s', stream && stream.id);
+  Logger.log('permanentStream.snippet.title=%s', streamSnippet && streamSnippet.title);
+  Logger.log('permanentStream.cdn.ingestionInfo.ingestionAddress=%s', ingestionInfo && ingestionInfo.ingestionAddress);
 
   Logger.log('boundBroadcast.id=%s', boundBroadcast && boundBroadcast.id);
   Logger.log('boundBroadcast.contentDetails.boundStreamId=%s', boundContentDetails && boundContentDetails.boundStreamId);
