@@ -166,22 +166,22 @@ function createLiveStream_(title, options) {
   return YouTube.LiveStreams.insert(body, 'id,snippet,cdn,contentDetails,status');
 }
 
-function getPermanentLiveStream_() {
-  if (typeof YT_PERMANENT_STREAM_ID === 'undefined') {
-    throw new Error('YT_PERMANENT_STREAM_ID is not defined');
+function getPersistentStream_() {
+  if (typeof PERSISTENT_STREAM_ID === 'undefined') {
+    throw new Error('PERSISTENT_STREAM_ID is not defined');
   }
 
-  var streamId = YT_PERMANENT_STREAM_ID;
+  var streamId = PERSISTENT_STREAM_ID;
 
   if (typeof streamId !== 'string' || streamId.trim() === '') {
-    throw new Error('YT_PERMANENT_STREAM_ID must be a non-empty string');
+    throw new Error('PERSISTENT_STREAM_ID must be a non-empty string');
   }
 
   var resp = YouTube.LiveStreams.list('id,snippet,cdn,contentDetails,status', { id: streamId });
   var items = (resp && resp.items) || [];
 
-  if (items.length !== 1) {
-    throw new Error('Expected exactly one live stream for YT_PERMANENT_STREAM_ID, got ' + items.length);
+  if (items.length === 0) {
+    throw new Error('Persistent stream not found for id=' + streamId);
   }
 
   return items[0];
