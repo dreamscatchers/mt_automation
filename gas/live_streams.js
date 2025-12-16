@@ -181,11 +181,11 @@ function createLiveStream_(title, options) {
 }
 
 function bindBroadcastToStream_(broadcastId, streamId) {
-  if (!broadcastId || typeof broadcastId !== 'string') {
+  if (typeof broadcastId !== 'string' || broadcastId.trim() === '') {
     throw new Error('broadcastId is required');
   }
 
-  if (!streamId || typeof streamId !== 'string') {
+  if (typeof streamId !== 'string' || streamId.trim() === '') {
     throw new Error('streamId is required');
   }
 
@@ -219,6 +219,58 @@ function testBindBroadcastToStream_() {
   Logger.log('boundBroadcast.contentDetails.boundStreamId=%s', contentDetails && contentDetails.boundStreamId);
   Logger.log('boundBroadcast.status.lifeCycleStatus=%s', status && status.lifeCycleStatus);
   Logger.log('boundBroadcast.snippet.title=%s', snippet && snippet.title);
+}
+
+function sanitizeBoundBroadcastForLog_(boundBroadcast) {
+  if (!boundBroadcast) return boundBroadcast;
+
+  var sanitized = JSON.parse(JSON.stringify(boundBroadcast));
+
+  var cdn = sanitized.cdn || {};
+  var ingestionInfo = cdn.ingestionInfo || {};
+  if (ingestionInfo.streamName) {
+    ingestionInfo.streamName = '[sanitized]';
+    cdn.ingestionInfo = ingestionInfo;
+    sanitized.cdn = cdn;
+  }
+
+  return sanitized;
+}
+
+function testCreateAndBindBroadcastAndStream_() {
+  var scheduledStartTime = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+  var broadcastTitle = 'Manual bind test ' + new Date().toISOString();
+  var streamTitle = 'Manual stream for bind ' + new Date().toISOString();
+
+  var broadcast = createLiveBroadcast_(broadcastTitle, 'Manual end-to-end test', scheduledStartTime, 'private');
+  var stream = createLiveStream_(streamTitle, {
+    description: 'Manual end-to-end bind test stream',
+    isReusable: true
+  });
+
+  var boundBroadcast = bindBroadcastToStream_(broadcast.id, stream.id);
+
+  var broadcastSnippet = broadcast && broadcast.snippet;
+  var broadcastStatus = broadcast && broadcast.status;
+  var streamCdn = stream && stream.cdn;
+  var ingestionInfo = streamCdn && streamCdn.ingestionInfo;
+  var boundContentDetails = boundBroadcast && boundBroadcast.contentDetails;
+  var boundStatus = boundBroadcast && boundBroadcast.status;
+
+  Logger.log('broadcast.id=%s', broadcast && broadcast.id);
+  Logger.log('broadcast.snippet.title=%s', broadcastSnippet && broadcastSnippet.title);
+  Logger.log('broadcast.snippet.scheduledStartTime=%s', broadcastSnippet && broadcastSnippet.scheduledStartTime);
+  Logger.log('broadcast.status.privacyStatus=%s', broadcastStatus && broadcastStatus.privacyStatus);
+
+  Logger.log('stream.id=%s', stream && stream.id);
+  Logger.log('stream.cdn.ingestionInfo.ingestionAddress=%s', ingestionInfo && ingestionInfo.ingestionAddress);
+
+  Logger.log('boundBroadcast.id=%s', boundBroadcast && boundBroadcast.id);
+  Logger.log('boundBroadcast.contentDetails.boundStreamId=%s', boundContentDetails && boundContentDetails.boundStreamId);
+  Logger.log('boundBroadcast.status.lifeCycleStatus=%s', boundStatus && boundStatus.lifeCycleStatus);
+
+  var sanitizedBound = sanitizeBoundBroadcastForLog_(boundBroadcast);
+  Logger.log('boundBroadcast (sanitized JSON)=%s', JSON.stringify(sanitizedBound));
 }
 
 function testCreateLiveStreamInsert() {
