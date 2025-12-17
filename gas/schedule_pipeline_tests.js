@@ -1,5 +1,6 @@
 function testProcessScheduleForDayInputValidation() {
-  var scheduledStartTime = '2025-05-20T12:00:00Z';
+  var day = '2025-05-20';
+  var scheduledStartTime = day + 'T12:00:00Z';
   var badDayErrors = [];
   var badStartErrors = [];
 
@@ -10,7 +11,7 @@ function testProcessScheduleForDayInputValidation() {
   }
 
   try {
-    processScheduleForDay_('2025-05-20', '2025/05/20 12:00', { dryRun: true });
+    processScheduleForDay_(day, '2025/05/20 12:00', { dryRun: true });
   } catch (err) {
     badStartErrors.push(err && err.message);
   }
@@ -29,7 +30,7 @@ function testProcessScheduleForDayInputValidation() {
 
 function testProcessScheduleForDayDryRun() {
   var day = '2025-05-20';
-  var scheduledStartTime = '2025-05-20T12:00:00Z';
+  var scheduledStartTime = day + 'T12:00:00Z';
 
   var result = processScheduleForDay_(day, scheduledStartTime, {
     dryRun: true,
@@ -78,7 +79,7 @@ function testProcessScheduleForDayDryRun() {
 
 function testProcessScheduleForDayLive() {
   var day = '2025-05-20';
-  var scheduledStartTime = '2025-05-20T12:00:00Z';
+  var scheduledStartTime = day + 'T12:00:00Z';
 
   var playlists = [GENERAL_YT_PLAYLIST_ID];
 
