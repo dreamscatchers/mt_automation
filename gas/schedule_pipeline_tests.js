@@ -1,4 +1,4 @@
-function testProcessScheduleForDayInputValidation_() {
+function testProcessScheduleForDayInputValidation() {
   var scheduledStartTime = '2025-05-20T12:00:00Z';
   var badDayErrors = [];
   var badStartErrors = [];
@@ -27,7 +27,7 @@ function testProcessScheduleForDayInputValidation_() {
   Logger.log('Invalid start time errors: %s', JSON.stringify(badStartErrors));
 }
 
-function testProcessScheduleForDayDryRun_() {
+function testProcessScheduleForDayDryRun() {
   var day = '2025-05-20';
   var scheduledStartTime = '2025-05-20T12:00:00Z';
 
@@ -76,7 +76,7 @@ function testProcessScheduleForDayDryRun_() {
   Logger.log('Dry run result: %s', JSON.stringify(result, null, 2));
 }
 
-function testProcessScheduleForDayLive_() {
+function testProcessScheduleForDayLive() {
   var day = '2025-05-20';
   var scheduledStartTime = '2025-05-20T12:00:00Z';
 
