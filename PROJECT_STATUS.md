@@ -36,3 +36,64 @@ This repository automates daily content production for the **Master's Touch Medi
 ## Google Apps Script (GAS)
 YouTube Data API v3 и Advanced Google Services уже подключены и используются.
 GAS применяется для выполнения операций записи в YouTube (обновление метаданных, работа с трансляциями и триггерами) с целью обхода проблем с OAuth refresh token в Python-части проекта.
+
+## Project Structure
+Структура репозитория (исключая `__pycache__`, `.venv`, `out` и `runtime`):
+
+```
+./
+  .clasp.json
+  .codex.md
+  .gitignore
+  PROJECT_MAP.md
+  PROJECT_STATUS.md
+  day_index.py
+  facebook_post.py
+  generate_image_gemini.py
+  list_stream_keys.py
+  mtm_content.py
+  post_if_finished.py
+  process_backup_video.py
+  prompt_generator.py
+  requirements.txt
+  schedule_range.py
+  schedule_week.py
+  yt_auth.py
+  yt_auth_test.py
+  yt_stream.py
+gas/
+  README.md
+  appsscript.json
+  backup_pipeline.js
+  backup_videos.js
+  config.js
+  day_index.js
+  live_streams.js
+  live_streams_tests.js
+  mtm_content.js
+  persistent_stream_tool.js
+  schedule_pipeline.js
+  schedule_pipeline_tests.js
+  thumbnails.js
+  trigger.js
+  utils.js
+  webapp_routes.js
+  youtube_update.js
+sources/
+  clothes.txt
+  front_base.png
+  genders.txt
+  hair_female.txt
+  hair_male.txt
+  locations.txt
+  palette.txt
+  styles.txt
+utils/
+  check_missing_jpgs.py
+  check_sequence.py
+  crop_sources_to_16x9.py
+  fb_refresh_page_token.py
+  jpeg_to_jpg.py
+  refresh_youtube_token.py
+  test_ssl_oauth2.py
+```
