@@ -40,7 +40,7 @@ function processBackupVideoForDay_(dayYmd, options) {
   }
 
   var thumbFileId = thumb.file.id;
-  var newTitle = buildStreamTitle_(index);
+  var newTitle = buildStreamTitle_(dayYmd);
   var newDesc = buildStreamDescription_();
 
   var videoResp = YouTube.Videos.list('snippet', { id: videoId });

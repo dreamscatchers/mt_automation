@@ -28,6 +28,30 @@ function testProcessScheduleForDayInputValidation() {
   Logger.log('Invalid start time errors: %s', JSON.stringify(badStartErrors));
 }
 
+function testBuildStreamTitleVariants() {
+  var sunday = '2025-02-23';
+  var weekday = '2025-02-24';
+
+  var sundayIndex = dateToIndex_(sunday);
+  var weekdayIndex = dateToIndex_(weekday);
+
+  var sundayTitle = buildStreamTitle_(sunday);
+  var weekdayTitle = buildStreamTitle_(weekday);
+
+  var expectedSunday =
+    'Master’s Touch Meditation (Full version, Sunday) — Day ' + sundayIndex + ' of 1000';
+  var expectedWeekday =
+    'Master’s Touch Meditation (½ version) — Day ' + weekdayIndex + ' of 1000';
+
+  if (sundayTitle !== expectedSunday) {
+    throw new Error('Expected Sunday title: ' + expectedSunday + ', got: ' + sundayTitle);
+  }
+
+  if (weekdayTitle !== expectedWeekday) {
+    throw new Error('Expected weekday title: ' + expectedWeekday + ', got: ' + weekdayTitle);
+  }
+}
+
 function testProcessScheduleForDayDryRun() {
   var day = '2025-05-20';
   var scheduledStartTime = day + 'T12:00:00Z';
