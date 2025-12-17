@@ -7,7 +7,6 @@ function runProcessBackupVideoTrigger() {
     );
 
     var res = processBackupVideoForDay_(day, {
-      maxPages: 3,
       dryRun: false,
       verbose: false
     });

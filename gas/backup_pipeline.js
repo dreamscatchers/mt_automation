@@ -1,6 +1,5 @@
 function processBackupVideoForDay_(dayYmd, options) {
   options = options || {};
-  var maxPages = options.maxPages || 3;
   var dryRun = options.dryRun !== false; // default true
   var verbose = !!options.verbose;
 
@@ -11,9 +10,12 @@ function processBackupVideoForDay_(dayYmd, options) {
   var index = dateToIndex_(dayYmd);
 
   if (verbose) Logger.log('[backup] day %s index %s', dayYmd, index);
+  if (verbose) Logger.log('[backup] ищу среди последних %s uploads', LAST_UPLOADS_LIMIT);
 
-  var backup = hasUploadedVideoWithDateInTitle_(dayYmd, maxPages);
-  if (verbose) Logger.log('[backup] search result: %s', JSON.stringify(backup));
+  var backup = hasUploadedVideoWithDateInTitle_(dayYmd);
+  if (verbose) {
+    Logger.log(backup.found ? '[backup] найдено' : '[backup] не найдено');
+  }
 
   if (!backup.found) {
     return { ok: true, day: dayYmd, index: index, foundBackup: false };
@@ -89,6 +91,6 @@ function processBackupVideoForDay_(dayYmd, options) {
 
 function testProcessBackupVideoForDay() {
   var day = '2025-12-16';
-  var res = processBackupVideoForDay_(day, { maxPages: 3, dryRun: true, verbose: true });
+  var res = processBackupVideoForDay_(day, { dryRun: true, verbose: true });
   Logger.log(JSON.stringify(res, null, 2));
 }
