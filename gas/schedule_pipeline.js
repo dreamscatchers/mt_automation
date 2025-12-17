@@ -37,7 +37,7 @@ function processScheduleForDay_(day, scheduledStartTime, opts) {
 
   var dayIndex = dateToIndex_(day);
 
-  var title = buildStreamTitle_(dayIndex);
+  var title = buildStreamTitle_(day);
   var description = buildStreamDescription_();
 
   var thumbInfo = findThumbnailInFolder_(THUMB_FOLDER_ID, day);
