@@ -166,6 +166,28 @@ function createLiveStream_(title, options) {
   return YouTube.LiveStreams.insert(body, 'id,snippet,cdn,contentDetails,status');
 }
 
+function addVideoToPlaylist_(playlistId, videoId) {
+  if (typeof playlistId !== 'string' || playlistId.trim() === '') {
+    throw new Error('playlistId must be a non-empty string');
+  }
+
+  if (typeof videoId !== 'string' || videoId.trim() === '') {
+    throw new Error('videoId must be a non-empty string');
+  }
+
+  var body = {
+    snippet: {
+      playlistId: playlistId,
+      resourceId: {
+        kind: 'youtube#video',
+        videoId: videoId
+      }
+    }
+  };
+
+  return YouTube.PlaylistItems.insert(body, 'id,snippet');
+}
+
 function getPersistentStream_() {
   if (typeof PERSISTENT_STREAM_ID === 'undefined') {
     throw new Error('PERSISTENT_STREAM_ID is not defined');

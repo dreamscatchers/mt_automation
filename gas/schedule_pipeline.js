@@ -3,6 +3,28 @@ function processScheduleForDay_(day, scheduledStartTime, opts) {
   var dryRun = !!opts.dryRun; // default false
   var verbose = !!opts.verbose;
   var privacyStatus = opts.privacyStatus;
+  var playlistsOpt = opts.playlists;
+
+  var allowedPrivacyStatuses = ['private', 'unlisted', 'public'];
+  if (privacyStatus && allowedPrivacyStatuses.indexOf(privacyStatus) === -1) {
+    throw new Error('privacyStatus must be one of private|unlisted|public');
+  }
+
+  var playlistIds = [];
+  if (typeof playlistsOpt !== 'undefined') {
+    if (!Array.isArray(playlistsOpt)) {
+      throw new Error('playlists must be an array of non-empty strings');
+    }
+
+    playlistsOpt.forEach(function (pid, idx) {
+      if (typeof pid !== 'string' || pid.trim() === '') {
+        throw new Error('playlists[' + idx + '] must be a non-empty string');
+      }
+      playlistIds.push(pid);
+    });
+  }
+
+  var resolvedPrivacy = privacyStatus || 'unlisted';
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
     throw new Error('day должен быть YYYY-MM-DD');
@@ -21,9 +43,12 @@ function processScheduleForDay_(day, scheduledStartTime, opts) {
   var thumbInfo = findThumbnailInFolder_(THUMB_FOLDER_ID, day);
 
   if (verbose) {
-    Logger.log('[schedule] day=%s index=%s start=%s dryRun=%s privacy=%s', day, dayIndex, scheduledStartTime, dryRun, privacyStatus || '(default)');
+    Logger.log('[schedule] day=%s index=%s start=%s dryRun=%s privacy=%s', day, dayIndex, scheduledStartTime, dryRun, resolvedPrivacy || '(default)');
     Logger.log('[schedule] title=%s', title);
     Logger.log('[schedule] thumbnail search: %s', JSON.stringify(thumbInfo));
+    if (playlistIds.length) {
+      Logger.log('[schedule] playlists to add: %s', JSON.stringify(playlistIds));
+    }
   }
 
   var result = {
@@ -37,6 +62,9 @@ function processScheduleForDay_(day, scheduledStartTime, opts) {
     watchUrl: null,
     boundStreamId: null,
     thumbnail: thumbInfo || null,
+    privacyStatus: resolvedPrivacy,
+    playlists: playlistIds,
+    playlistResults: [],
     errors: []
   };
 
@@ -69,6 +97,35 @@ function processScheduleForDay_(day, scheduledStartTime, opts) {
   result.watchUrl = watchUrl;
   result.boundStreamId = boundStreamId;
   result.thumbnail = thumbUsed || thumbInfo || null;
+  result.privacyStatus = resolvedPrivacy;
+
+  var playlistResults = [];
+  if (playlistIds.length) {
+    if (!broadcastId) {
+      playlistResults.push({ playlistId: null, ok: false, error: 'broadcastId is missing' });
+      result.errors.push('broadcastId is missing, cannot add to playlists');
+    } else {
+      playlistIds.forEach(function (pid) {
+        var playlistResult = { playlistId: pid, ok: false };
+        try {
+          addVideoToPlaylist_(pid, broadcastId);
+          playlistResult.ok = true;
+          if (verbose) {
+            Logger.log('[schedule] added broadcast %s to playlist %s', broadcastId, pid);
+          }
+        } catch (err) {
+          playlistResult.error = err && err.message ? err.message : String(err);
+          result.errors.push('playlist ' + pid + ': ' + playlistResult.error);
+          if (verbose) {
+            Logger.log('[schedule] failed to add broadcast %s to playlist %s: %s', broadcastId, pid, playlistResult.error);
+          }
+        }
+        playlistResults.push(playlistResult);
+      });
+    }
+  }
+
+  result.playlistResults = playlistResults;
 
   return result;
 }
