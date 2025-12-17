@@ -1,3 +1,5 @@
+var LAST_UPLOADS_LIMIT = 5;
+
 function getUploadsPlaylistId_() {
   var resp = YouTube.Channels.list('contentDetails', { mine: true });
   var item = resp.items && resp.items[0];
@@ -10,7 +12,7 @@ function getUploadsPlaylistId_() {
 }
 
 function getLastUploadedVideos_(limit) {
-  limit = limit || 5;
+  limit = limit || LAST_UPLOADS_LIMIT;
 
   var uploadsId = getUploadsPlaylistId_();
   if (!uploadsId) {
@@ -45,7 +47,7 @@ function isQuotaExceededError_(err) {
   return String(msg).indexOf('quotaExceeded') !== -1;
 }
 
-function hasUploadedVideoWithDateInTitle_(dayYmd, maxPages) {
+function hasUploadedVideoWithDateInTitle_(dayYmd) {
   // YYYY-MM-DD -> YYYYMMDD
   var ymdCompact = dayYmd.replace(/-/g, '');
 
@@ -60,7 +62,7 @@ function hasUploadedVideoWithDateInTitle_(dayYmd, maxPages) {
   var checked = 0;
 
   try {
-    var videos = getLastUploadedVideos_(5);
+    var videos = getLastUploadedVideos_(LAST_UPLOADS_LIMIT);
     for (var i = 0; i < videos.length; i++) {
       var title = videos[i].title;
       if (!title) continue;
@@ -86,8 +88,5 @@ function hasUploadedVideoWithDateInTitle_(dayYmd, maxPages) {
     throw err;
   }
 
-  return {
-    found: false,
-    checked: checked
-  };
+  return { found: false, checked: checked };
 }
