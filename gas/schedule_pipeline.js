@@ -130,6 +130,31 @@ function processScheduleForDay_(day, scheduledStartTime, opts) {
   return result;
 }
 
+function buildScheduledStartTimeAtLocalHour_(dayYmd, hour, minute) {
+  var day = parseYmd_(dayYmd);
+  var scheduled = new Date(day.getTime());
+  scheduled.setHours(hour, minute, 0, 0);
+  return scheduled.toISOString();
+}
+
+function processScheduleForDayWithRules_(dayYmd, dryRun) {
+  var day = parseYmd_(dayYmd);
+  var isSunday = day.getUTCDay() === 0;
+
+  var playlists = isSunday
+    ? [GENERAL_YT_PLAYLIST_ID, FULL_MTM_PLAYLIST_ID]
+    : [GENERAL_YT_PLAYLIST_ID, HALF_MTM_PLAYLIST_ID];
+
+  var scheduledStartTime = buildScheduledStartTimeAtLocalHour_(dayYmd, 10, 0);
+  var privacyStatus = 'public';
+
+  return processScheduleForDay_(dayYmd, scheduledStartTime, {
+    dryRun: !!dryRun,
+    playlists: playlists,
+    privacyStatus: privacyStatus
+  });
+}
+
 function testProcessScheduleForDay_() {
   var day = '2025-12-16';
   var scheduledStartTime = '2025-12-16T10:00:00-04:00';

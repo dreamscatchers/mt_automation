@@ -28,6 +28,108 @@ function testProcessScheduleForDayInputValidation() {
   Logger.log('Invalid start time errors: %s', JSON.stringify(badStartErrors));
 }
 
+function testProcessScheduleForDayWithRulesSunday() {
+  var original = processScheduleForDay_;
+  var calls = [];
+  var fakeResult = { ok: true, marker: 'sunday' };
+
+  processScheduleForDay_ = function (dayYmd, scheduledStartTime, opts) {
+    calls.push({ dayYmd: dayYmd, scheduledStartTime: scheduledStartTime, opts: opts });
+    return fakeResult;
+  };
+
+  var day = '2025-02-23'; // Sunday
+
+  try {
+    var result = processScheduleForDayWithRules_(day, true);
+
+    if (result !== fakeResult) {
+      throw new Error('Expected processScheduleForDayWithRules_ to return underlying result');
+    }
+
+    if (calls.length !== 1) {
+      throw new Error('Expected processScheduleForDay_ to be called exactly once');
+    }
+
+    var call = calls[0];
+    var expectedPlaylists = [GENERAL_YT_PLAYLIST_ID, FULL_MTM_PLAYLIST_ID];
+    var expectedStart = buildScheduledStartTimeAtLocalHour_(day, 10, 0);
+
+    if (call.dayYmd !== day) {
+      throw new Error('Expected dayYmd to be passed through');
+    }
+
+    if (call.opts.privacyStatus !== 'public') {
+      throw new Error('Expected privacyStatus to be public');
+    }
+
+    if (call.opts.dryRun !== true) {
+      throw new Error('Expected dryRun to be forwarded');
+    }
+
+    if (call.scheduledStartTime !== expectedStart) {
+      throw new Error('Expected scheduledStartTime to be 10:00 local time');
+    }
+
+    if (JSON.stringify(call.opts.playlists) !== JSON.stringify(expectedPlaylists)) {
+      throw new Error('Expected Sunday playlists [GENERAL, FULL]');
+    }
+  } finally {
+    processScheduleForDay_ = original;
+  }
+}
+
+function testProcessScheduleForDayWithRulesWeekday() {
+  var original = processScheduleForDay_;
+  var calls = [];
+  var fakeResult = { ok: true, marker: 'weekday' };
+
+  processScheduleForDay_ = function (dayYmd, scheduledStartTime, opts) {
+    calls.push({ dayYmd: dayYmd, scheduledStartTime: scheduledStartTime, opts: opts });
+    return fakeResult;
+  };
+
+  var day = '2025-02-24'; // Monday
+
+  try {
+    var result = processScheduleForDayWithRules_(day, false);
+
+    if (result !== fakeResult) {
+      throw new Error('Expected processScheduleForDayWithRules_ to return underlying result');
+    }
+
+    if (calls.length !== 1) {
+      throw new Error('Expected processScheduleForDay_ to be called exactly once');
+    }
+
+    var call = calls[0];
+    var expectedPlaylists = [GENERAL_YT_PLAYLIST_ID, HALF_MTM_PLAYLIST_ID];
+    var expectedStart = buildScheduledStartTimeAtLocalHour_(day, 10, 0);
+
+    if (call.dayYmd !== day) {
+      throw new Error('Expected dayYmd to be passed through');
+    }
+
+    if (call.opts.privacyStatus !== 'public') {
+      throw new Error('Expected privacyStatus to be public');
+    }
+
+    if (call.opts.dryRun !== false) {
+      throw new Error('Expected dryRun to be forwarded');
+    }
+
+    if (call.scheduledStartTime !== expectedStart) {
+      throw new Error('Expected scheduledStartTime to be 10:00 local time');
+    }
+
+    if (JSON.stringify(call.opts.playlists) !== JSON.stringify(expectedPlaylists)) {
+      throw new Error('Expected weekday playlists [GENERAL, HALF]');
+    }
+  } finally {
+    processScheduleForDay_ = original;
+  }
+}
+
 function testBuildStreamTitleVariants() {
   var sunday = '2025-02-23';
   var weekday = '2025-02-24';
