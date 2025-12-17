@@ -1,17 +1,17 @@
 function testProcessScheduleForDayInputValidation() {
-  var day = '2025-05-20';
+  var day = '2025-12-22';
   var scheduledStartTime = day + 'T12:00:00Z';
   var badDayErrors = [];
   var badStartErrors = [];
 
   try {
-    processScheduleForDay_('20-05-2025', scheduledStartTime, { dryRun: true });
+    processScheduleForDay_('22-12-2025', scheduledStartTime, { dryRun: true });
   } catch (err) {
     badDayErrors.push(err && err.message);
   }
 
   try {
-    processScheduleForDay_(day, '2025/05/20 12:00', { dryRun: true });
+    processScheduleForDay_(day, '2025/12/22 12:00', { dryRun: true });
   } catch (err) {
     badStartErrors.push(err && err.message);
   }
@@ -38,7 +38,7 @@ function testProcessScheduleForDayWithRulesSunday() {
     return fakeResult;
   };
 
-  var day = '2025-02-23'; // Sunday
+  var day = '2025-12-21'; // Sunday
 
   try {
     var result = processScheduleForDayWithRules_(day, true);
@@ -89,7 +89,7 @@ function testProcessScheduleForDayWithRulesWeekday() {
     return fakeResult;
   };
 
-  var day = '2025-02-24'; // Monday
+  var day = '2025-12-22'; // Monday
 
   try {
     var result = processScheduleForDayWithRules_(day, false);
@@ -131,8 +131,8 @@ function testProcessScheduleForDayWithRulesWeekday() {
 }
 
 function testBuildStreamTitleVariants() {
-  var sunday = '2025-02-23';
-  var weekday = '2025-02-24';
+  var sunday = '2025-12-21';
+  var weekday = '2025-12-22';
 
   var sundayIndex = dateToIndex_(sunday);
   var weekdayIndex = dateToIndex_(weekday);
@@ -155,7 +155,7 @@ function testBuildStreamTitleVariants() {
 }
 
 function testProcessScheduleForDayDryRun() {
-  var day = '2025-05-20';
+  var day = '2025-12-22';
   var scheduledStartTime = day + 'T12:00:00Z';
 
   var result = processScheduleForDay_(day, scheduledStartTime, {
@@ -204,7 +204,7 @@ function testProcessScheduleForDayDryRun() {
 }
 
 function testProcessScheduleForDayLive() {
-  var day = '2025-05-20';
+  var day = '2025-12-22';
   var scheduledStartTime = day + 'T12:00:00Z';
 
   var playlists = [GENERAL_YT_PLAYLIST_ID];
