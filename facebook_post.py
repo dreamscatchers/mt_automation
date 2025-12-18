@@ -7,7 +7,7 @@ import sys
 from typing import Any, Dict
 
 import requests
-from dotenv import load_dotenv
+from dotenv import dotenv_values, load_dotenv
 
 
 class FacebookPostError(Exception):
@@ -24,6 +24,7 @@ class FacebookPoster:
         api_version: str | None = None,
     ) -> None:
         load_dotenv()
+        self._timeout_s = self._load_timeout()
 
         self.page_id = page_id or os.getenv("FB_PAGE_ID")
         self.access_token = access_token or os.getenv("FB_PAGE_ACCESS_TOKEN")
@@ -69,7 +70,7 @@ class FacebookPoster:
             payload["link"] = link
 
         try:
-            response = requests.post(url, data=payload, timeout=10)
+            response = requests.post(url, data=payload, timeout=self._timeout_s)
         except requests.RequestException as exc:  # pragma: no cover - network failure path
             raise FacebookPostError(f"Failed to reach Facebook API: {exc}") from exc
 
@@ -104,6 +105,23 @@ class FacebookPoster:
             parts.append("Unknown error response from Facebook.")
 
         return "Facebook API error (" + ", ".join(parts) + ")"
+
+    @staticmethod
+    def _load_timeout() -> float:
+        cfg = dotenv_values()
+        raw_timeout = cfg.get("FACEBOOK_TIMEOUT")
+        if raw_timeout is None:
+            raise RuntimeError("FACEBOOK_TIMEOUT is not set in .env")
+
+        try:
+            timeout_s = float(raw_timeout)
+        except (TypeError, ValueError) as exc:
+            raise RuntimeError("FACEBOOK_TIMEOUT must be a number greater than 0") from exc
+
+        if timeout_s <= 0:
+            raise RuntimeError("FACEBOOK_TIMEOUT must be greater than 0")
+
+        return timeout_s
 
 
 def post_message(message: str, link: str | None = None) -> Dict[str, Any]:
