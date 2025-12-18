@@ -4,10 +4,10 @@ function buildStreamTitle_(dayYmd) {
   var isSunday = day.getUTCDay() === 0;
 
   if (isSunday) {
-    return "Master’s Touch Meditation (Full version, Sunday) — Day " + index + " of 1000";
+    return index + ". Master’s Touch Meditation (Full version, Sunday) — Day " + index + " of 1000";
   }
 
-  return "Master’s Touch Meditation (½ version) — Day " + index + " of 1000";
+  return index + ". Master’s Touch Meditation (½ version) — Day " + index + " of 1000";
 }
 
 function buildStreamDescription_() {
