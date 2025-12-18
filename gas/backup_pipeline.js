@@ -2,41 +2,58 @@ function processBackupVideoForDay_(dayYmd, options) {
   options = options || {};
   var dryRun = options.dryRun !== false; // default true
   var verbose = !!options.verbose;
+  var planned = {};
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dayYmd)) {
     throw new Error('day должен быть YYYY-MM-DD');
   }
 
   var index = dateToIndex_(dayYmd);
+  var result = { ok: true, day: dayYmd, index: index };
 
   if (verbose) Logger.log('[backup] day %s index %s', dayYmd, index);
   if (verbose) Logger.log('[backup] ищу среди последних %s uploads', LAST_UPLOADS_LIMIT);
 
   var backup = hasUploadedVideoWithDateInTitle_(dayYmd);
+  result.foundBackup = backup.found;
   if (verbose) {
     Logger.log(backup.found ? '[backup] найдено' : '[backup] не найдено');
   }
 
   if (!backup.found) {
-    return { ok: true, day: dayYmd, index: index, foundBackup: false };
+    result.backupPlaylistId = BACKUP_YT_PLAYLIST_ID;
+    result.addedToBackupPlaylist = false;
+    return result;
   }
 
   var videoId = backup.id;
   var videoUrl = backup.url || 'https://www.youtube.com/watch?v=' + videoId;
 
+  result.videoId = videoId;
+  result.videoUrl = videoUrl;
+
+  var playlist = ensureVideoInPlaylist_(BACKUP_YT_PLAYLIST_ID, videoId, {
+    dryRun: dryRun,
+    verbose: verbose
+  });
+  result.backupPlaylistId = playlist.playlistId;
+  result.addedToBackupPlaylist = !!playlist.added;
+  if (playlist.alreadyInPlaylist) {
+    result.alreadyInBackupPlaylist = true;
+  }
+  if (playlist.planned) {
+    planned.addToBackupPlaylist = true;
+  }
+
   var thumb = findThumbnailInFolder_(THUMB_FOLDER_ID, dayYmd);
   if (verbose) Logger.log('[backup] thumbnail search: %s', JSON.stringify(thumb));
 
   if (!thumb.found) {
-    return {
-      ok: true,
-      day: dayYmd,
-      index: index,
-      foundBackup: true,
-      foundThumb: false,
-      videoId: videoId,
-      videoUrl: videoUrl
-    };
+    result.foundThumb = false;
+    if (Object.keys(planned).length) {
+      result.planned = planned;
+    }
+    return result;
   }
 
   var thumbFileId = thumb.file.id;
@@ -50,22 +67,17 @@ function processBackupVideoForDay_(dayYmd, options) {
   var currentTitle = videoResp.items[0].snippet && videoResp.items[0].snippet.title;
   var alreadyCanonicalTitle = currentTitle === newTitle;
 
-  var planned = { title: newTitle, description: newDesc, thumbnail: true };
+  planned.title = newTitle;
+  planned.description = newDesc;
+  planned.thumbnail = true;
 
   if (dryRun) {
-    return {
-      ok: true,
-      day: dayYmd,
-      index: index,
-      foundBackup: true,
-      foundThumb: true,
-      videoId: videoId,
-      videoUrl: videoUrl,
-      thumbFileId: thumbFileId,
-      dryRun: true,
-      alreadyCanonicalTitle: alreadyCanonicalTitle,
-      planned: planned
-    };
+    result.foundThumb = true;
+    result.thumbFileId = thumbFileId;
+    result.dryRun = true;
+    result.alreadyCanonicalTitle = alreadyCanonicalTitle;
+    result.planned = planned;
+    return result;
   }
 
   updateVideoMetadata_(videoId, {
@@ -74,19 +86,13 @@ function processBackupVideoForDay_(dayYmd, options) {
     thumbFileId: thumbFileId
   });
 
-  return {
-    ok: true,
-    day: dayYmd,
-    index: index,
-    foundBackup: true,
-    foundThumb: true,
-    videoId: videoId,
-    videoUrl: videoUrl,
-    thumbFileId: thumbFileId,
-    dryRun: false,
-    alreadyCanonicalTitle: alreadyCanonicalTitle,
-    planned: planned
-  };
+  result.foundThumb = true;
+  result.thumbFileId = thumbFileId;
+  result.dryRun = false;
+  result.alreadyCanonicalTitle = alreadyCanonicalTitle;
+  result.planned = planned;
+
+  return result;
 }
 
 function testProcessBackupVideoForDay() {

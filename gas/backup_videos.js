@@ -90,3 +90,68 @@ function hasUploadedVideoWithDateInTitle_(dayYmd) {
 
   return { found: false, checked: checked };
 }
+
+function isVideoInPlaylist_(playlistId, videoId) {
+  var resp = YouTube.PlaylistItems.list('id', {
+    playlistId: playlistId,
+    videoId: videoId,
+    maxResults: 1
+  });
+
+  var items = (resp && resp.items) || [];
+  return items.length > 0;
+}
+
+function isDuplicatePlaylistItemError_(err) {
+  var msg = (err && err.message) || err;
+  if (!msg) return false;
+
+  var text = String(msg).toLowerCase();
+  return (
+    text.indexOf('already contains the specified video') !== -1 ||
+    text.indexOf('duplicate') !== -1 ||
+    text.indexOf('playlist contains the specified video') !== -1
+  );
+}
+
+function ensureVideoInPlaylist_(playlistId, videoId, options) {
+  options = options || {};
+  var dryRun = !!options.dryRun;
+  var verbose = !!options.verbose;
+
+  var result = {
+    playlistId: playlistId,
+    added: false,
+    alreadyInPlaylist: false,
+    planned: false
+  };
+
+  if (dryRun) {
+    result.planned = true;
+    return result;
+  }
+
+  var inPlaylist = isVideoInPlaylist_(playlistId, videoId);
+  if (inPlaylist) {
+    result.added = true;
+    result.alreadyInPlaylist = true;
+    if (verbose) Logger.log('[backup] video %s already in playlist %s', videoId, playlistId);
+    return result;
+  }
+
+  try {
+    addVideoToPlaylist_(playlistId, videoId);
+    result.added = true;
+    if (verbose) Logger.log('[backup] added video %s to playlist %s', videoId, playlistId);
+  } catch (err) {
+    if (isDuplicatePlaylistItemError_(err)) {
+      result.added = true;
+      result.alreadyInPlaylist = true;
+      if (verbose) Logger.log('[backup] video %s already in playlist %s (duplicate)', videoId, playlistId);
+    } else {
+      throw err;
+    }
+  }
+
+  return result;
+}
