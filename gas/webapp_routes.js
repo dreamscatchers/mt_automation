@@ -34,6 +34,28 @@ function doGet(e) {
         found: !!last,
         stream: last || null
       });
+    },
+
+    notifyFbPosted: () => {
+      var day = (p.day || '').trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+        return json_({ ok: false, error: 'bad_request', detail: 'day must be YYYY-MM-DD' }, 400);
+      }
+
+      var postId = (p.postId || p.post_id || '').trim();
+      var message = (p.message || '').trim();
+
+      var lines = ['Facebook пост опубликован.', 'Дата: ' + day];
+      if (postId) {
+        lines.push('Post ID: ' + postId);
+      }
+      if (message) {
+        lines.push('Сообщение: ' + message);
+      }
+
+      MailApp.sendEmail('yykindr@gmail.com', 'Facebook пост опубликован', lines.join('\n'));
+
+      return json_({ ok: true });
     }
   };
 
