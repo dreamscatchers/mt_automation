@@ -8,7 +8,7 @@ import json
 import os
 from datetime import date
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 from dotenv import load_dotenv
 
@@ -23,6 +23,7 @@ RUNTIME_DIR = Path(__file__).resolve().parent / "runtime"
 RUNTIME_DIR.mkdir(exist_ok=True)
 
 POSTED_STREAMS_FILE = RUNTIME_DIR / "posted_streams.json"
+GAS_TIMEOUT_S = 15.0
 
 
 def parse_args() -> argparse.Namespace:
@@ -54,6 +55,16 @@ def parse_target_date(raw_date: Optional[str]) -> date:
     return date.today()
 
 
+def get_gas_config() -> Tuple[str, str]:
+    gas_url = os.getenv("GAS_WEBAPP_URL")
+    gas_token = os.getenv("GAS_WEBAPP_TOKEN")
+
+    if not gas_url or not gas_token:
+        raise RuntimeError("GAS_WEBAPP_URL or GAS_WEBAPP_TOKEN not set (check .env)")
+
+    return gas_url, gas_token
+
+
 def load_posted_streams() -> Dict[str, bool]:
     if not POSTED_STREAMS_FILE.exists():
         return {}
@@ -77,17 +88,13 @@ def build_message(index: int) -> str:
 
 
 def fetch_finished_status(day: str) -> dict | None:
-    gas_url = os.getenv("GAS_WEBAPP_URL")
-    gas_token = os.getenv("GAS_WEBAPP_TOKEN")
-
-    if not gas_url or not gas_token:
-        raise RuntimeError("GAS_WEBAPP_URL or GAS_WEBAPP_TOKEN not set (check .env)")
+    gas_url, gas_token = get_gas_config()
 
     try:
         response = requests.get(
             gas_url,
             params={"ep": "finishedOnDay", "day": day, "token": gas_token},
-            timeout=15,
+            timeout=GAS_TIMEOUT_S,
         )
         response.raise_for_status()
     except requests.RequestException as exc:
@@ -99,6 +106,34 @@ def fetch_finished_status(day: str) -> dict | None:
     except ValueError:
         print("Не удалось распарсить JSON-ответ от GAS.")
         return None
+
+
+def notify_fb_posted(day: str, post_id: str | None = None) -> None:
+    try:
+        gas_url, gas_token = get_gas_config()
+    except RuntimeError as exc:
+        print(f"Не удалось получить конфигурацию GAS для уведомления: {exc}")
+        return
+
+    params = {"ep": "notifyFbPosted", "day": day, "token": gas_token}
+    if post_id:
+        params["postId"] = post_id
+
+    try:
+        response = requests.get(gas_url, params=params, timeout=GAS_TIMEOUT_S)
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        print(f"Не удалось отправить уведомление в GAS: {exc}")
+        return
+
+    try:
+        payload = response.json()
+    except ValueError:
+        print("Не удалось распарсить JSON-ответ при уведомлении о публикации.")
+        return
+
+    if payload.get("ok") is not True:
+        print("GAS вернул ошибку при уведомлении о публикации (ok != true).")
 
 
 def main() -> None:
@@ -152,10 +187,13 @@ def main() -> None:
         return
 
     try:
-        post_message(message, link=stream_url)
+        fb_response = post_message(message, link=stream_url)
     except Exception as exc:  # noqa: BLE001
         print(f"Ошибка публикации в Facebook: {exc}")
         return
+
+    post_id = fb_response.get("id") if isinstance(fb_response, dict) else None
+    notify_fb_posted(day, post_id=post_id)
 
     save_posted_stream(identifier)
     print("Пост опубликован и отмечен в posted_streams.json.")
