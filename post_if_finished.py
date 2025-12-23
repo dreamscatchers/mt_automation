@@ -125,15 +125,22 @@ def notify_fb_posted(day: str, post_id: str | None = None) -> None:
     except requests.RequestException as exc:
         print(f"Не удалось отправить уведомление в GAS: {exc}")
         return
+    response_text = response.text
 
     try:
         payload = response.json()
     except ValueError:
         print("Не удалось распарсить JSON-ответ при уведомлении о публикации.")
+        print(f"HTTP статус: {response.status_code}")
+        print(f"Сырый ответ GAS: {response_text}")
         return
 
     if payload.get("ok") is not True:
         print("GAS вернул ошибку при уведомлении о публикации (ok != true).")
+        print(f"HTTP статус: {response.status_code}")
+        safe_params = {k: v for k, v in params.items() if k != "token"}
+        print(f"Параметры запроса (без токена): {safe_params}")
+        print(f"Ответ GAS: {payload}")
 
 
 def main() -> None:
