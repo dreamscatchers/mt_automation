@@ -1,19 +1,44 @@
 function runProcessBackupVideoTrigger() {
-  try {
-    var day = Utilities.formatDate(
-      new Date(),
-      Session.getScriptTimeZone(),
-      'yyyy-MM-dd'
-    );
+  var day = Utilities.formatDate(
+    new Date(),
+    Session.getScriptTimeZone(),
+    'yyyy-MM-dd'
+  );
 
+  try {
     var res = processBackupVideoForDay_(day, {
       dryRun: false,
       verbose: false
     });
 
     Logger.log(JSON.stringify(res, null, 2));
+
+    if (res && res.foundBackup) {
+      if (res.ok) {
+        var successLines = [
+          'Backup video processed successfully.',
+          'Day: ' + day,
+          'Video: ' + (res.videoUrl || res.videoId || 'unknown')
+        ];
+        sendBackupProcessingEmail_('Backup video processed', successLines);
+      } else {
+        var errorLines = [
+          'Backup video processing failed.',
+          'Day: ' + day,
+          'Video: ' + (res.videoUrl || res.videoId || 'unknown'),
+          'Error: ' + (res.errorMessage || res.error || 'unknown')
+        ];
+        sendBackupProcessingEmail_('Backup video processing error', errorLines);
+      }
+    }
   } catch (e) {
     console.error('[runProcessBackupVideoTrigger]', e);
+    var errorLines = [
+      'Backup video processing failed with exception.',
+      'Day: ' + day,
+      'Error: ' + (e && e.message ? e.message : String(e))
+    ];
+    sendBackupProcessingEmail_('Backup video processing error', errorLines);
     throw e;
   }
 }

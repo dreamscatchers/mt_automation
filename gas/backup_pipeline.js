@@ -50,6 +50,9 @@ function processBackupVideoForDay_(dayYmd, options) {
 
   if (!thumb.found) {
     result.foundThumb = false;
+    result.ok = false;
+    result.error = 'thumbnail_not_found';
+    result.errorMessage = 'Thumbnail not found for ' + dayYmd;
     if (Object.keys(planned).length) {
       result.planned = planned;
     }
@@ -93,6 +96,17 @@ function processBackupVideoForDay_(dayYmd, options) {
   result.planned = planned;
 
   return result;
+}
+
+function getBackupNotificationEmail_() {
+  return (
+    PropertiesService.getScriptProperties().getProperty('BACKUP_NOTIFY_EMAIL') ||
+    'yykindr@gmail.com'
+  );
+}
+
+function sendBackupProcessingEmail_(subject, lines) {
+  MailApp.sendEmail(getBackupNotificationEmail_(), subject, lines.join('\n'));
 }
 
 function testProcessBackupVideoForDay() {
