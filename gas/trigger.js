@@ -42,3 +42,23 @@ function runProcessBackupVideoTrigger() {
     throw e;
   }
 }
+
+function runFacebookPostForFinishedStreamTrigger() {
+  var day = Utilities.formatDate(
+    new Date(),
+    Session.getScriptTimeZone(),
+    'yyyy-MM-dd'
+  );
+
+  try {
+    var res = processFacebookPostForFinishedStream_(day, {
+      dryRun: false,
+      verbose: false
+    });
+
+    Logger.log(JSON.stringify(res, null, 2));
+  } catch (e) {
+    console.error('[runFacebookPostForFinishedStreamTrigger]', e);
+    throw e;
+  }
+}
