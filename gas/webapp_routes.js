@@ -36,6 +36,26 @@ function doGet(e) {
       });
     },
 
+    // /exec?ep=postFbIfFinished&day=YYYY-MM-DD[&dryRun=true]
+    postFbIfFinished: () => {
+      var day = (p.day || '').trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+        return json_({ ok: false, error: 'bad_request', detail: 'day must be YYYY-MM-DD' }, 400);
+      }
+
+      var tz = (p.tz || 'America/Santo_Domingo').trim();
+      var pages = Math.max(1, Math.min(20, parseInt(p.pages || '3', 10) || 3));
+      var dryRun = String(p.dryRun || '').toLowerCase() === 'true';
+
+      var res = processFacebookPostForFinishedStream_(day, {
+        tz: tz,
+        pages: pages,
+        dryRun: dryRun
+      });
+
+      return json_(res);
+    },
+
     notifyFbPosted: () => {
       var day = (p.day || '').trim();
       if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
