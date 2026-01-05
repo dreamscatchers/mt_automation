@@ -57,6 +57,23 @@ function runFacebookPostForFinishedStreamTrigger() {
     });
 
     Logger.log(JSON.stringify(res, null, 2));
+
+    if (res && res.posted) {
+      var successLines = [
+        'Facebook пост опубликован.',
+        'Дата: ' + day
+      ];
+      if (res.postId) {
+        successLines.push('Post ID: ' + res.postId);
+      }
+      if (res.message) {
+        successLines.push('Сообщение: ' + res.message);
+      }
+      if (res.stream && res.stream.url) {
+        successLines.push('Ссылка на стрим: ' + res.stream.url);
+      }
+      sendFacebookPostNotificationEmail_('Facebook пост опубликован', successLines);
+    }
   } catch (e) {
     console.error('[runFacebookPostForFinishedStreamTrigger]', e);
     throw e;
