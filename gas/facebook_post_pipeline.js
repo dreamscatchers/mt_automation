@@ -34,6 +34,17 @@ function markFacebookStreamPosted_(identifier) {
   saveFacebookPostedStreams_(data);
 }
 
+function getFacebookPostNotificationEmail_() {
+  return (
+    PropertiesService.getScriptProperties().getProperty('FB_POST_NOTIFY_EMAIL') ||
+    'yykindr@gmail.com'
+  );
+}
+
+function sendFacebookPostNotificationEmail_(subject, lines) {
+  MailApp.sendEmail(getFacebookPostNotificationEmail_(), subject, lines.join('\n'));
+}
+
 function processFacebookPostForFinishedStream_(dayYmd, options) {
   options = options || {};
   var dryRun = !!options.dryRun;
