@@ -79,3 +79,24 @@ function runFacebookPostForFinishedStreamTrigger() {
     throw e;
   }
 }
+
+function runScheduleTomorrowStreamTrigger() {
+  var tz = Session.getScriptTimeZone();
+  var tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  var day = Utilities.formatDate(tomorrow, tz, 'yyyy-MM-dd');
+
+  try {
+    var existing = findUpcomingBroadcastsForDay_(day, { tz: tz, pages: 3 });
+    if (existing.length) {
+      Logger.log('[schedule-tomorrow] already scheduled for %s: %s', day, JSON.stringify(existing, null, 2));
+      return;
+    }
+
+    var res = processScheduleForDayWithRules_(day, false);
+    Logger.log('[schedule-tomorrow] scheduled for %s: %s', day, JSON.stringify(res, null, 2));
+  } catch (e) {
+    console.error('[runScheduleTomorrowStreamTrigger]', e);
+    throw e;
+  }
+}
