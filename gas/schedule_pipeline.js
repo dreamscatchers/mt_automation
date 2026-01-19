@@ -145,13 +145,17 @@ function findUpcomingBroadcastsForDay_(dayYmd, options) {
   for (var i = 0; i < pages; i++) {
     var resp = YouTube.LiveBroadcasts.list('id,snippet,status', {
       mine: true,
-      broadcastStatus: 'upcoming',
       maxResults: 50,
       pageToken: pageToken
     });
 
     var items = resp && resp.items ? resp.items : [];
     items.forEach(function (item) {
+      var lifeCycleStatus = item && item.status && item.status.lifeCycleStatus;
+      if (lifeCycleStatus && ['created', 'ready', 'testing'].indexOf(lifeCycleStatus) === -1) {
+        return;
+      }
+
       var scheduledStart = item && item.snippet && item.snippet.scheduledStartTime;
       if (!scheduledStart) return;
 
