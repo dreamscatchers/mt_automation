@@ -130,6 +130,50 @@ function processScheduleForDay_(day, scheduledStartTime, opts) {
   return result;
 }
 
+function findUpcomingBroadcastsForDay_(dayYmd, options) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dayYmd)) {
+    throw new Error('day должен быть YYYY-MM-DD');
+  }
+
+  options = options || {};
+  var pages = Math.max(1, options.pages || 3);
+  var tz = options.tz || Session.getScriptTimeZone() || 'UTC';
+
+  var matches = [];
+  var pageToken;
+
+  for (var i = 0; i < pages; i++) {
+    var resp = YouTube.LiveBroadcasts.list('id,snippet,status', {
+      mine: true,
+      broadcastStatus: 'upcoming',
+      maxResults: 50,
+      pageToken: pageToken
+    });
+
+    var items = resp && resp.items ? resp.items : [];
+    items.forEach(function (item) {
+      var scheduledStart = item && item.snippet && item.snippet.scheduledStartTime;
+      if (!scheduledStart) return;
+
+      var localDay = Utilities.formatDate(new Date(scheduledStart), tz, 'yyyy-MM-dd');
+      if (localDay !== dayYmd) return;
+
+      matches.push({
+        id: item.id,
+        title: item.snippet && item.snippet.title,
+        scheduledStartTime: scheduledStart,
+        localDay: localDay,
+        status: item.status || null
+      });
+    });
+
+    pageToken = resp.nextPageToken;
+    if (!pageToken) break;
+  }
+
+  return matches;
+}
+
 function buildScheduledStartTimeAtLocalHour_(dayYmd, hour, minute) {
   var day = parseYmd_(dayYmd);
   var scheduled = new Date(day.getTime());
