@@ -183,8 +183,18 @@ function buildScheduledStartTimeAtLocalHour_(dayYmd, hour, minute) {
   if (!parts) {
     throw new Error('day должен быть YYYY-MM-DD');
   }
+  var tz = Session.getScriptTimeZone() || 'UTC';
   var scheduled = new Date(+parts[1], +parts[2] - 1, +parts[3], hour, minute, 0, 0);
-  return scheduled.toISOString();
+  var formatted = Utilities.formatDate(scheduled, tz, "yyyy-MM-dd'T'HH:mm:ssXXX");
+  Logger.log(
+    '[schedule] buildScheduledStartTimeAtLocalHour day=%s hour=%s minute=%s tz=%s iso=%s',
+    dayYmd,
+    hour,
+    minute,
+    tz,
+    formatted
+  );
+  return formatted;
 }
 
 function processScheduleForDayWithRules_(dayYmd, dryRun) {
