@@ -158,6 +158,7 @@ function testBuildScheduledStartTimeAtLocalHourLocalDay() {
   var day = '2026-01-21';
   var scheduledStart = buildScheduledStartTimeAtLocalHour_(day, 10, 0);
   var tz = Session.getScriptTimeZone() || 'UTC';
+  var isoPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[+-]\d{2}:\d{2}|Z)$/;
 
   var localDay = Utilities.formatDate(new Date(scheduledStart), tz, 'yyyy-MM-dd');
   var localTime = Utilities.formatDate(new Date(scheduledStart), tz, 'HH:mm');
@@ -169,6 +170,17 @@ function testBuildScheduledStartTimeAtLocalHourLocalDay() {
   if (localTime !== '10:00') {
     throw new Error('Expected local time to be 10:00, got: ' + localTime);
   }
+
+  if (!isoPattern.test(scheduledStart)) {
+    throw new Error('Expected scheduledStartTime to include timezone offset, got: ' + scheduledStart);
+  }
+
+  Logger.log(
+    'Scheduled start for %s at 10:00 local: %s (tz=%s)',
+    day,
+    scheduledStart,
+    tz
+  );
 }
 
 function testProcessScheduleForDayDryRun() {
