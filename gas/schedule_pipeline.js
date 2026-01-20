@@ -179,9 +179,11 @@ function findUpcomingBroadcastsForDay_(dayYmd, options) {
 }
 
 function buildScheduledStartTimeAtLocalHour_(dayYmd, hour, minute) {
-  var day = parseYmd_(dayYmd);
-  var scheduled = new Date(day.getTime());
-  scheduled.setHours(hour, minute, 0, 0);
+  var parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayYmd);
+  if (!parts) {
+    throw new Error('day должен быть YYYY-MM-DD');
+  }
+  var scheduled = new Date(+parts[1], +parts[2] - 1, +parts[3], hour, minute, 0, 0);
   return scheduled.toISOString();
 }
 

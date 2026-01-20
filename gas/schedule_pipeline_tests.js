@@ -154,6 +154,23 @@ function testBuildStreamTitleVariants() {
   }
 }
 
+function testBuildScheduledStartTimeAtLocalHourLocalDay() {
+  var day = '2026-01-21';
+  var scheduledStart = buildScheduledStartTimeAtLocalHour_(day, 10, 0);
+  var tz = Session.getScriptTimeZone() || 'UTC';
+
+  var localDay = Utilities.formatDate(new Date(scheduledStart), tz, 'yyyy-MM-dd');
+  var localTime = Utilities.formatDate(new Date(scheduledStart), tz, 'HH:mm');
+
+  if (localDay !== day) {
+    throw new Error('Expected local day to match input day, got: ' + localDay);
+  }
+
+  if (localTime !== '10:00') {
+    throw new Error('Expected local time to be 10:00, got: ' + localTime);
+  }
+}
+
 function testProcessScheduleForDayDryRun() {
   var day = '2025-12-22';
   var scheduledStartTime = day + 'T12:00:00Z';
