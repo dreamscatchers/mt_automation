@@ -41,6 +41,30 @@ function processScheduleForDay_(day, scheduledStartTime, opts) {
   var description = buildStreamDescription_();
 
   var thumbInfo = findThumbnailInFolder_(THUMB_FOLDER_ID, day);
+  var generatedThumb = null;
+  if (!thumbInfo.found && !dryRun) {
+    if (verbose) {
+      Logger.log('[schedule] thumbnail missing for %s, generating via Gemini', day);
+    }
+    generatedThumb = generate_day_image(dayIndex, { folder_id: THUMB_FOLDER_ID });
+    if (verbose) {
+      Logger.log('[schedule] generated thumbnail: %s', JSON.stringify(generatedThumb));
+    }
+    thumbInfo = findThumbnailInFolder_(THUMB_FOLDER_ID, day);
+    if (!thumbInfo.found && generatedThumb && generatedThumb.file_id) {
+      thumbInfo = {
+        ok: true,
+        day: day,
+        index: dayIndex,
+        found: true,
+        file: {
+          id: generatedThumb.file_id,
+          name: generatedThumb.file_name,
+          url: 'https://drive.google.com/file/d/' + generatedThumb.file_id + '/view'
+        }
+      };
+    }
+  }
 
   if (verbose) {
     Logger.log('[schedule] day=%s index=%s start=%s dryRun=%s privacy=%s', day, dayIndex, scheduledStartTime, dryRun, resolvedPrivacy || '(default)');
@@ -62,6 +86,7 @@ function processScheduleForDay_(day, scheduledStartTime, opts) {
     watchUrl: null,
     boundStreamId: null,
     thumbnail: thumbInfo || null,
+    generatedThumbnail: generatedThumb,
     privacyStatus: resolvedPrivacy,
     playlists: playlistIds,
     playlistResults: [],
