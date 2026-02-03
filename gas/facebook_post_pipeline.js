@@ -18,7 +18,11 @@ function loadFacebookPostedStreams_() {
     if (!data || typeof data !== 'object') {
       return {};
     }
-    return data;
+    var pruned = pruneFacebookPostedStreams_(data);
+    if (Object.keys(pruned).length !== Object.keys(data).length) {
+      saveFacebookPostedStreams_(pruned);
+    }
+    return pruned;
   } catch (err) {
     return {};
   }
@@ -28,10 +32,36 @@ function saveFacebookPostedStreams_(data) {
   PropertiesService.getScriptProperties().setProperty('FB_POSTED_STREAMS', JSON.stringify(data));
 }
 
+function pruneFacebookPostedStreams_(data) {
+  var nowMillis = Date.now();
+  var maxAgeMs = 7 * 24 * 60 * 60 * 1000;
+  var cutoff = nowMillis - maxAgeMs;
+  var pruned = {};
+
+  Object.keys(data || {}).forEach(function(key) {
+    var value = data[key];
+    var timestamp = null;
+
+    if (typeof value === 'number') {
+      timestamp = value;
+    } else if (typeof value === 'string' && /^\d+$/.test(value)) {
+      timestamp = parseInt(value, 10);
+    } else if (value && typeof value === 'object' && typeof value.postedAt === 'number') {
+      timestamp = value.postedAt;
+    }
+
+    if (timestamp && timestamp >= cutoff) {
+      pruned[key] = timestamp;
+    }
+  });
+
+  return pruned;
+}
+
 function markFacebookStreamPosted_(identifier) {
   var data = loadFacebookPostedStreams_();
-  data[identifier] = true;
-  saveFacebookPostedStreams_(data);
+  data[identifier] = Date.now();
+  saveFacebookPostedStreams_(pruneFacebookPostedStreams_(data));
 }
 
 function getFacebookPostNotificationEmail_() {
